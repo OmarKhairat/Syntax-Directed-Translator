@@ -14,6 +14,8 @@ class Parser{
         vector< string > get_keywords_lines(vector<string> rules);
         vector< string > parse_keywords(vector<string> keywords_lines);
         vector< string > parse_punctuation(vector<string> punctuation_lines);
+        unordered_map< string, vector<string> > parse_defs(vector< pair<string, string> > def_lines);
+        vector< pair< string, vector<string> > > parse_expr(vector< pair<string, string> > expr_lines, unordered_map< string, vector<string> > defs);
         vector< string > parse_rhs(string rhs_line);
         string remove_pre_spaces(string s);
         string eliminate_back_slashes(string s);

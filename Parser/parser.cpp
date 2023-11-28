@@ -196,7 +196,7 @@ vector< string > Parser::parse_rhs(string rhs_line)
     string dummy = "";
     rhs_line = " " + rhs_line + " ";
     bool char_found = false;
-    cout << "\t\trhs_line:" << rhs_line << endl;
+    // cout << "\t\trhs_line:" << rhs_line << endl;
     while(i < rhs_line.length())
     {
         if(is_special_char(rhs_line[i]) && i != 0 && rhs_line[i - 1] != '\\')
@@ -238,6 +238,10 @@ vector< string > Parser::parse_rhs(string rhs_line)
             }
             temp = "";
         }
+        else if(i == rhs_line.length() - 1 && rhs_line[i] == ' ' && parsed_tokens.empty() && temp.compare("") != 0)
+        {
+            parsed_tokens.push_back(modifiy_dot_token(temp));
+        }
         else if(rhs_line[i] != ' ')
         {
             char_found = true;
@@ -248,7 +252,63 @@ vector< string > Parser::parse_rhs(string rhs_line)
     return replace_dashes(parsed_tokens);
 }
 
+unordered_map< string, vector<string> > Parser::parse_defs(vector< pair<string, string> > def_lines)
+{
+    unordered_map< string, vector<string> > defs;
+    for(int i = 0; i < def_lines.size(); i++)
+    {
+        string lhs = def_lines[i].first;
+        string rhs_line = def_lines[i].second;
+        vector<string> temp_rhs = parse_rhs(rhs_line);
+        vector<string> rhs;
+        for(int j = 0; j < temp_rhs.size(); j++)
+        {
+            auto it = defs.find(temp_rhs[j]);
+            if(it != defs.end())
+            {
+                vector<string> v = defs[temp_rhs[j]];
+                v.insert(v.begin(), "(");
+                v.push_back(")");
+                rhs.insert(rhs.end(), v.begin(), v.end());
+            }
+            else
+            {
+                rhs.push_back(temp_rhs[j]);
+            }
+        }
+        defs[lhs] = rhs;
+    }
+    return defs;
+}
 
+vector< pair< string, vector<string> > > Parser::parse_expr(vector< pair<string, string> > expr_lines, unordered_map< string, vector<string> > defs)
+{
+    vector< pair< string, vector<string> > > exprs;
+    for(int i = 0; i < expr_lines.size(); i++)
+    {
+        string lhs = expr_lines[i].first;
+        string rhs_line = expr_lines[i].second;
+        vector<string> temp_rhs = parse_rhs(rhs_line);
+        vector<string> rhs;
+        for(int j = 0; j < temp_rhs.size(); j++)
+        {
+            auto it = defs.find(temp_rhs[j]);
+            if(it != defs.end())
+            {
+                vector<string> v = defs[temp_rhs[j]];
+                v.insert(v.begin(), "(");
+                v.push_back(")");
+                rhs.insert(rhs.end(), v.begin(), v.end());
+            }
+            else
+            {
+                rhs.push_back(temp_rhs[j]);
+            }
+        }
+        exprs.push_back(make_pair(lhs, rhs));
+    }
+    return exprs;
+}
 
 int main()
 {
@@ -273,20 +333,29 @@ int main()
     //     cout << "*" <<punctuation << "*" << endl;
     // cout << "******************************************************************" << endl;
 
-    unordered_map< string, vector<string> > defs;
-    vector<string> v = p.parse_rhs("digit+ | digit+ . digits ( \\L | E digits)");
-    for(string tok : v)
-        cout << "*" <<tok << "*" << endl;
-    // cout << p.parse_rhs() << endl;
-    // vector< pair<string, string> > defs = p.get_regular_def_lines(rules);
-    // for(pair<string, string> def : defs)
-    //     cout << def.first << "&&&&&" << def.second<< endl;
-    // cout << "******************************************************************" << endl;
+    
+    // vector<string> v = p.parse_rhs("   digits     ");
+    // for(string tok : v)
+    //     cout << "*" <<tok << "*" << endl;
 
-    // vector< pair<string, string> > exprs = p.get_regular_expr_lines(rules);
-    // for(pair<string, string> expr : exprs)
-    //     cout << expr.first << "&&&&&" << expr.second<< endl;
-    // cout << "******************************************************************" << endl;
+
+    vector< pair<string, string> > defs_lines = p.get_regular_def_lines(rules);
+    unordered_map< string, vector<string> > defs = p.parse_defs(defs_lines);
+    // for (const auto& pair : defs) {
+    //     std::cout << "key: " << pair.first << std::endl << "\t";
+    //     for(string tok : pair.second)
+    //         cout <<tok << " ";
+    //     cout << endl;
+    // }
+
+    vector< pair<string, string> > expr_lines = p.get_regular_expr_lines(rules);
+    vector< pair< string, vector<string> > > exprs = p.parse_expr(expr_lines, defs);
+    // for (const auto& pair : exprs) {
+    //     std::cout << "key: " << pair.first << std::endl << "\t";
+    //     for(string tok : pair.second)
+    //         cout <<tok << " ";
+    //     cout << endl;
+    // }
 
     
     return 0;
