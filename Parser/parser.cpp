@@ -137,6 +137,7 @@ vector<string> Parser::parse_keywords(vector<string> keywords_lines)
     }
     return keywords;
 }
+
 vector< string > Parser::parse_punctuation(vector<string> punctuation_lines)
 {
     return parse_keywords(punctuation_lines);
@@ -310,6 +311,57 @@ vector< pair< string, vector<string> > > Parser::parse_expr(vector< pair<string,
     return exprs;
 }
 
+vector<string> Parser::infixtoPos(vector<string> infix)
+{
+    vector<string> pos;
+    stack<string> stck;
+    unordered_map<string, int> special_chars;
+    special_chars["*"] = 5; special_chars["+"] = 4;
+    special_chars["."] = 3; special_chars["|"] = 2; 
+    special_chars["("] = special_chars[")"] = 0;
+    for(string token : infix)
+    {
+        if(token.compare("(") == 0)
+        {
+            stck.push(token);
+        }
+        else if(token.compare(")") == 0)
+        {
+            while(!stck.empty() && stck.top().compare("(") != 0)
+            {
+                pos.push_back(stck.top());
+                stck.pop();
+            }
+            if(!stck.empty())
+                stck.pop();
+        }
+        else if(token.compare("*") == 0 || token.compare("+") == 0 || token.compare("|") == 0 || token.compare(".") == 0)
+        {
+            while(!stck.empty() && special_chars[token] <= special_chars[stck.top()])
+            {
+                pos.push_back(stck.top());
+                stck.pop();
+            }
+            stck.push(token);
+        }
+        else
+        {
+            pos.push_back(token);
+        }
+    }
+    return pos;
+}
+
+vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pair< string, vector<string> > > exprs)
+{
+    vector< pair< string, vector<string> > > res;
+    for(pair< string, vector<string> > expr: exprs)
+    {
+        res.push_back(make_pair(expr.first, infixtoPos(expr.second)));
+    }
+    return res;
+}
+
 int main()
 {
     // cout << ("|" + "") << endl;
@@ -350,12 +402,13 @@ int main()
 
     vector< pair<string, string> > expr_lines = p.get_regular_expr_lines(rules);
     vector< pair< string, vector<string> > > exprs = p.parse_expr(expr_lines, defs);
-    // for (const auto& pair : exprs) {
-    //     std::cout << "key: " << pair.first << std::endl << "\t";
-    //     for(string tok : pair.second)
-    //         cout <<tok << " ";
-    //     cout << endl;
-    // }
+    exprs = p.convert_exprs_to_pos(exprs);
+    for (const auto& pair : exprs) {
+        std::cout << "key: " << pair.first << std::endl << "\t";
+        for(string tok : pair.second)
+            cout <<tok << " ";
+        cout << endl;
+    }
 
     
     return 0;
