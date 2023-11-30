@@ -790,7 +790,7 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
 int main()
 {
     Parser p;
-    vector<string> rules = p.get_rules_lines("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/lexical_rules.txt");
+    vector<string> rules = p.get_rules_lines("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
@@ -804,15 +804,15 @@ int main()
     vector< pair<string, string> > expr_lines = p.get_regular_expr_lines(rules);
     vector< pair< string, vector<string> > > exprs = p.parse_expr(expr_lines, defs);
     exprs = p.convert_exprs_to_pos(exprs);
-    for (const auto& pair : exprs) {
-        std::cout << "key: " << pair.first << std::endl << "\t";
-        for(string tok : pair.second)
-            cout <<tok << " ";
-        cout << endl;
-    }
+    // for (const auto& pair : exprs) {
+    //     std::cout << "key: " << pair.first << std::endl << "\t";
+    //     for(string tok : pair.second)
+    //         cout <<tok << " ";
+    //     cout << endl;
+    // }
 
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
-    exprs_nfa.toJSON("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/NFA.json");
+    exprs_nfa.toJSON("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
     return 0;
 }
