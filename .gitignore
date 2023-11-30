@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+
+# Directories
+.vscode/
+.output/
+output/.DS_Store
+output/minn
+*.plist
+output/main.dSYM/Contents/Resources/DWARF/main
+output/minn.dSYM/Contents/Resources/DWARF/minn
+.DS_Store
+Parser/output/parser
+Parser/output/parser.dSYM/Contents/Resources/DWARF/parser
+LexicalAnalyzer/output/lexicalAnalyzer
