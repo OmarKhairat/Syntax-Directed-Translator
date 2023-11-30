@@ -3,6 +3,9 @@
 #include <stack>
 #include <set>
 #include <bits/stdc++.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -20,12 +23,16 @@ public:
     NFA();
     void addState(int id, bool is_acceptance = false, bool is_start = false , string token = "");
     void addTransition(int from, string symbol, int to);
+    NFA pop();
+    void push(NFA nfa);
     void concatenate();
+    void concatenateAllStack();
     void or_op();
     void kleeneStar();
     void positiveClosure();
     void processSymbol(string symbol);
-    unordered_map<int, NFA_State> states;
+    void toJSON(string file_path);
+    unordered_map< int, NFA_State > states;
     vector<int> start_states;
     vector<int> end_states;
 
@@ -54,9 +61,21 @@ void NFA::addState(int id, bool is_acceptance, bool is_start, string token)
 
 void NFA::addTransition(int from, string symbol, int to)
 {
-    vector<int> to_stats = states[from].transitions[symbol];
-    to_stats.push_back(to);
-    states[from].transitions[symbol] = to_stats;
+    vector<int> to_states = states[from].transitions[symbol];
+    to_states.push_back(to);
+    states[from].transitions[symbol] = to_states;
+}
+
+NFA NFA::pop()
+{
+    NFA nfa = nfa_stack.top();
+    nfa_stack.pop();
+    return nfa;
+}
+
+void NFA::push(NFA nfa)
+{
+    nfa_stack.push(nfa);
 }
 
 void NFA::concatenate()
@@ -66,109 +85,158 @@ void NFA::concatenate()
     NFA nfa1 = nfa_stack.top();
     nfa_stack.pop();
 
+    for(auto state : nfa2.states) // copy states of nfa2 to nfa1
+    {
+        nfa1.states[state.first] = state.second;
+    }
     for (int state_i : nfa1.end_states)
     {
         NFA_State state = nfa1.states[state_i];
         state.is_acceptance = false;
+        nfa1.states[state_i] = state;
         for (int state_j : nfa2.start_states)
         {
             nfa1.addTransition(state_i, "\\L", state_j);
         }
     }
-    for(auto state : nfa2.states)
-    {
-        nfa1.states[state.first] = state.second;
-    }
     nfa1.end_states = nfa2.end_states;
     nfa_stack.push(nfa1);
 }
 
+void NFA::concatenateAllStack()
+{
+    if (nfa_stack.size() == 0)
+        return;
+    if (nfa_stack.size() == 1)
+    {
+        NFA nfa = nfa_stack.top();
+        nfa_stack.pop();
+        for (auto state : nfa.states)   // copy states
+        {
+            states[state.first] = state.second;
+        }
+        start_states = nfa.start_states;
+        end_states = nfa.end_states;
+        return;
+    }
+
+    start_states.clear();
+    end_states.clear();
+    states.clear();
+    int new_start_state = stateCounter++;
+    addState(new_start_state, false, true);
+
+    while (nfa_stack.size() > 0)
+    {
+        NFA nfa = nfa_stack.top();
+        nfa_stack.pop();
+
+        for (auto state : nfa.states)   // copy states
+        {
+            states[state.first] = state.second;
+        }
+        for (int state_i : nfa.start_states)
+        {
+            addTransition(new_start_state, "\\L", state_i);
+        }
+        end_states.insert(end_states.end(), nfa.end_states.begin(), nfa.end_states.end());
+    }
+
+}
+
 void NFA::or_op()
 {
+    // pop 2 NFAs
     NFA nfa2 = nfa_stack.top();
     nfa_stack.pop();
     NFA nfa1 = nfa_stack.top();
     nfa_stack.pop();
 
+    // new start and end states and new NFA
+    NFA new_nfa;
     int new_start_state = stateCounter++;
     int new_end_state = stateCounter++;
+    new_nfa.addState(new_start_state, false, true);
+    new_nfa.addState(new_end_state, true);
 
-    addState(new_start_state, false, true);
-    addState(new_end_state, true);
-
-    for (int state_i : nfa1.start_states)
-    {
-        addTransition(new_start_state, "\\L", state_i);
-    }
-    for (int state_i : nfa2.start_states)
-    {
-        addTransition(new_start_state, "\\L", state_i);
-    }
-    for (int state_i : nfa1.end_states)
-    {
-        NFA_State state = nfa1.states[state_i];
-        state.is_acceptance = false;
-        addTransition(state_i, "\\L", new_end_state);
-    }
-    for (int state_i : nfa2.end_states)
-    {
-        NFA_State state = nfa2.states[state_i];
-        state.is_acceptance = false;
-        addTransition(state_i, "\\L", new_end_state);
-    }
-
+    // copy states
     for(auto state : nfa1.states)
     {
-        states[state.first] = state.second;
+        new_nfa.states[state.first] = state.second;
     }
     for(auto state : nfa2.states)
     {
-        states[state.first] = state.second;
+        new_nfa.states[state.first] = state.second;
     }
-    end_states.push_back(new_end_state);
-    start_states.push_back(new_start_state);
 
-    nfa_stack.push(*this);
+    // add transitions from the new start
+    for (int state_i : nfa1.start_states)
+    {
+        new_nfa.addTransition(new_start_state, "\\L", state_i);
+    }
+    for (int state_i : nfa2.start_states)
+    {
+        new_nfa.addTransition(new_start_state, "\\L", state_i);
+    }
+
+    // add transitions to the new end
+    for (int state_i : nfa1.end_states)
+    {
+        NFA_State state = new_nfa.states[state_i];
+        state.is_acceptance = false;
+        new_nfa.states[state_i] = state;
+        new_nfa.addTransition(state_i, "\\L", new_end_state);
+    }
+    for (int state_i : nfa2.end_states)
+    {
+        NFA_State state = new_nfa.states[state_i];
+        state.is_acceptance = false;
+        new_nfa.states[state_i] = state;
+        new_nfa.addTransition(state_i, "\\L", new_end_state);
+    }
+
+    nfa_stack.push(new_nfa);
 }
 
 void NFA::kleeneStar()
 {
+    // pop
     NFA nfa = nfa_stack.top();
     nfa_stack.pop();
 
+    // new start and end states and new NFA
+    NFA new_nfa;
     int new_start_state = stateCounter++;
     int new_end_state = stateCounter++;
+    new_nfa.addState(new_start_state, false, true);
+    new_nfa.addState(new_end_state, true);
 
-    addState(new_start_state, false, true);
-    addState(new_end_state, true);
+    for(auto state : nfa.states) // copy states
+    {
+        new_nfa.states[state.first] = state.second;
+    }
 
     for (int state_i : nfa.start_states) // new start to old start
     {
-        addTransition(new_start_state, "\\L", state_i);
+        new_nfa.addTransition(new_start_state, "\\L", state_i);
     }
     for (int state_i : nfa.end_states) // old end to new end
     {
-        NFA_State state = nfa.states[state_i];
+        NFA_State state = new_nfa.states[state_i];
         state.is_acceptance = false;
-        addTransition(state_i, "\\L", new_end_state);
+        new_nfa.states[state_i] = state;
+        new_nfa.addTransition(state_i, "\\L", new_end_state);
     }
     for (int state_i : nfa.end_states) // old end to starts
     {
         for (int state_j : nfa.start_states)
         {
-            addTransition(state_i, "\\L", state_j);
+            new_nfa.addTransition(state_i, "\\L", state_j);
         }
     }
+    new_nfa.addTransition(new_start_state, "\\L", new_end_state);
 
-    for(auto state : nfa.states)
-    {
-        states[state.first] = state.second;
-    }
-    end_states.push_back(new_end_state);
-    start_states.push_back(new_start_state);
-
-    nfa_stack.push(*this);
-
+    nfa_stack.push(new_nfa);
 }
 
 void NFA::positiveClosure()
@@ -180,46 +248,111 @@ void NFA::positiveClosure()
     {
         for (int state_j : nfa.start_states)
         {
-            addTransition(state_i, "\\L", state_j);
+            nfa.addTransition(state_i, "\\L", state_j);
         }
     }
 
-    for(auto state : nfa.states)
-    {
-        states[state.first] = state.second;
-    }
-    nfa_stack.push(*this);
+    nfa_stack.push(nfa);
 }
 
 void NFA::processSymbol(string symbol)
 {
+    NFA new_nfa;
     int new_start_state = stateCounter++;
-    addState(new_start_state, false, true);
+    new_nfa.addState(new_start_state, false, true);
 
     for(int i=0 ; i<symbol.length() ; i++)
     {
-        if(i>0 && symbol[i--] == '\\')
+        if(i>0 && symbol[i-1] == '\\')
         {
             continue;
         }
 
         char c = symbol[i];
         int new_end_state = stateCounter++;
-        addState(new_end_state);
+        new_nfa.addState(new_end_state);
 
         if(c == '\\')
         {
-            addTransition(new_start_state, symbol.substr(i, 2), new_end_state);
+            new_nfa.addTransition(new_start_state, symbol.substr(i, 2), new_end_state);
 
         }else{
-            addTransition(new_start_state, string(1, c), new_end_state);
+            new_nfa.addTransition(new_start_state, string(1, c), new_end_state);
         }
         new_start_state = new_end_state;
     }
-    states[new_start_state].is_acceptance = true;
-    end_states.push_back(new_start_state);
+    new_nfa.states[new_start_state].is_acceptance = true;
+    new_nfa.end_states.push_back(new_start_state);
 
-    nfa_stack.push(*this);
+    nfa_stack.push(new_nfa);
+}
+
+void NFA::toJSON(string file_path)
+{
+    ofstream file(file_path);
+    if (!file.is_open()) {
+        cerr << "Error: Unable to open the file." << endl;
+        return; 
+    }   
+    file << "{" << endl;
+    file << "\t\"start_states\": [" << endl;
+    for(int i = 0 ; i < start_states.size() ; i++)
+    {
+        int start_state = start_states[i];
+        file << "\t\t" << start_state ;
+        if(i != start_states.size() - 1)
+            file << "," ;
+        file << endl;
+    }
+    file << "\t]," << endl;
+    file << "\t\"end_states\": [" << endl;
+    for(int i = 0 ; i < end_states.size() ; i++)
+    {
+        int start_state = end_states[i];
+        file << "\t\t" << start_state ;
+        if(i != end_states.size() - 1)
+            file << "," ;
+        file << endl;
+    }
+    file << "\t]," << endl;
+    file << "\t\"states\": [" << endl;
+    for(int i=0 ; i< states.size() ; i++)
+    {
+        NFA_State state = states[i];
+        file << "\t\t{" << endl;
+        file << "\t\t\t\"id\": " << i << "," << endl;
+        file << "\t\t\t\"is_acceptance\": " << state.is_acceptance << "," << endl;
+        file << "\t\t\t\"token\": \"" << state.token << "\"," << endl;
+        file << "\t\t\t\"transitions\": [" << endl;
+        int j = 0;
+        for(auto transition : state.transitions)
+        {
+            file << "\t\t\t\t{" << endl;
+            file << "\t\t\t\t\t\"symbol\": \"" << transition.first << "\"," << endl;
+            file << "\t\t\t\t\t\"to\": [" << endl;
+            for(int k=0 ; k < transition.second.size() ; k++)
+            {
+                file << "\t\t\t\t\t\t" << transition.second[k] ;
+                if(k != transition.second.size() - 1)
+                    file << "," ;
+                file << endl;
+            }
+            file << "\t\t\t\t\t]" << endl;
+            file << "\t\t\t\t}" ;
+            if(j != state.transitions.size() - 1)
+                file << ",";
+            file << endl;
+            j++ ;
+        }
+        file << "\t\t\t]" << endl;
+        file << "\t\t}";
+        if(i != states.size() - 1)
+            file << "," ;
+        file << endl;
+    }
+    file << "\t]" << endl;
+    file << "}" << endl;
+    file.close();
 }
 
 
@@ -593,7 +726,7 @@ vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pa
 }
 
 
-NFA convert_expr_postfix_to_NFA(vector< pair< string, vector<string> > > exprs)
+NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
 {
     NFA res;
     for(pair< string, vector<string> > expr : exprs)
@@ -621,15 +754,35 @@ NFA convert_expr_postfix_to_NFA(vector< pair< string, vector<string> > > exprs)
                 res.processSymbol(token);
             }
         }
-        for(int state_i : res.end_states)
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
         {
-            NFA_State state = res.states[state_i];
-            if(state.token.compare("") == 0){
-                state.token = expr.first;
-                res.states[state_i] = state;
-            }
+            expr_nfa.states[state_i].token = expr.first;
         }
+        res.push(expr_nfa);
     }
+    for(string keyword : keywords)
+    {
+        res.processSymbol(keyword);
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
+        {
+            expr_nfa.states[state_i].token = keyword;
+        }
+        res.push(expr_nfa);
+    }
+    for(string punctuation : punctuations)
+    {
+        res.processSymbol(punctuation);
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
+        {
+            expr_nfa.states[state_i].token = punctuation;
+        }
+        res.push(expr_nfa);
+    }
+
+    res.concatenateAllStack();
     return res;
 }
 
@@ -658,25 +811,8 @@ int main()
         cout << endl;
     }
 
-    NFA exprs_nfa = convert_expr_postfix_to_NFA(exprs);
-    //print exprs_nfa
-    for(auto state : exprs_nfa.states)
-    {
-        cout << "state: " << state.first << endl;
-        cout << "\tis_acceptance: " << state.second.is_acceptance << endl;
-        cout << "\ttoken: " << state.second.token << endl;
-        cout << "\ttransitions: " << endl;
-        for(auto transition : state.second.transitions)
-        {
-            cout << "\t\t" << transition.first << ": ";
-            for(int to_state : transition.second)
-            {
-                cout << to_state << " ";
-            }
-            cout << endl;
-        }
-    }
-
-    
+    NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
+    exprs_nfa.toJSON("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/NFA.json");
+    cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
     return 0;
 }
