@@ -1,9 +1,229 @@
 #include "parser.h"
 #include <unordered_map>
+#include <stack>
+#include <set>
 #include <bits/stdc++.h>
 
 using namespace std;
 
+// -------------------NFA-------------------
+struct NFA_State
+{
+    int id;
+    bool is_acceptance;
+    string token; // if is_acceptance is true
+    unordered_map< string, vector<int> > transitions;
+};
+
+class NFA {
+public:
+    NFA();
+    void addState(int id, bool is_acceptance = false, bool is_start = false , string token = "");
+    void addTransition(int from, string symbol, int to);
+    void concatenate();
+    void or_op();
+    void kleeneStar();
+    void positiveClosure();
+    void processSymbol(string symbol);
+    unordered_map<int, NFA_State> states;
+    vector<int> start_states;
+    vector<int> end_states;
+
+private:
+    stack<NFA> nfa_stack;
+    int stateCounter;
+};
+
+NFA::NFA()
+{
+    stateCounter = 0;
+}
+
+void NFA::addState(int id, bool is_acceptance, bool is_start, string token)
+{
+    NFA_State state;
+    state.id = id;
+    state.is_acceptance = is_acceptance;
+    if (is_acceptance)
+        end_states.push_back(id);
+    if (is_start)
+        start_states.push_back(id);
+    state.token = token;
+    states[id] = state;
+}
+
+void NFA::addTransition(int from, string symbol, int to)
+{
+    vector<int> to_stats = states[from].transitions[symbol];
+    to_stats.push_back(to);
+    states[from].transitions[symbol] = to_stats;
+}
+
+void NFA::concatenate()
+{
+    NFA nfa2 = nfa_stack.top();
+    nfa_stack.pop();
+    NFA nfa1 = nfa_stack.top();
+    nfa_stack.pop();
+
+    for (int state_i : nfa1.end_states)
+    {
+        NFA_State state = nfa1.states[state_i];
+        state.is_acceptance = false;
+        for (int state_j : nfa2.start_states)
+        {
+            nfa1.addTransition(state_i, "\\L", state_j);
+        }
+    }
+    for(auto state : nfa2.states)
+    {
+        nfa1.states[state.first] = state.second;
+    }
+    nfa1.end_states = nfa2.end_states;
+    nfa_stack.push(nfa1);
+}
+
+void NFA::or_op()
+{
+    NFA nfa2 = nfa_stack.top();
+    nfa_stack.pop();
+    NFA nfa1 = nfa_stack.top();
+    nfa_stack.pop();
+
+    int new_start_state = stateCounter++;
+    int new_end_state = stateCounter++;
+
+    addState(new_start_state, false, true);
+    addState(new_end_state, true);
+
+    for (int state_i : nfa1.start_states)
+    {
+        addTransition(new_start_state, "\\L", state_i);
+    }
+    for (int state_i : nfa2.start_states)
+    {
+        addTransition(new_start_state, "\\L", state_i);
+    }
+    for (int state_i : nfa1.end_states)
+    {
+        NFA_State state = nfa1.states[state_i];
+        state.is_acceptance = false;
+        addTransition(state_i, "\\L", new_end_state);
+    }
+    for (int state_i : nfa2.end_states)
+    {
+        NFA_State state = nfa2.states[state_i];
+        state.is_acceptance = false;
+        addTransition(state_i, "\\L", new_end_state);
+    }
+
+    for(auto state : nfa1.states)
+    {
+        states[state.first] = state.second;
+    }
+    for(auto state : nfa2.states)
+    {
+        states[state.first] = state.second;
+    }
+    end_states.push_back(new_end_state);
+    start_states.push_back(new_start_state);
+
+    nfa_stack.push(*this);
+}
+
+void NFA::kleeneStar()
+{
+    NFA nfa = nfa_stack.top();
+    nfa_stack.pop();
+
+    int new_start_state = stateCounter++;
+    int new_end_state = stateCounter++;
+
+    addState(new_start_state, false, true);
+    addState(new_end_state, true);
+
+    for (int state_i : nfa.start_states) // new start to old start
+    {
+        addTransition(new_start_state, "\\L", state_i);
+    }
+    for (int state_i : nfa.end_states) // old end to new end
+    {
+        NFA_State state = nfa.states[state_i];
+        state.is_acceptance = false;
+        addTransition(state_i, "\\L", new_end_state);
+    }
+    for (int state_i : nfa.end_states) // old end to starts
+    {
+        for (int state_j : nfa.start_states)
+        {
+            addTransition(state_i, "\\L", state_j);
+        }
+    }
+
+    for(auto state : nfa.states)
+    {
+        states[state.first] = state.second;
+    }
+    end_states.push_back(new_end_state);
+    start_states.push_back(new_start_state);
+
+    nfa_stack.push(*this);
+
+}
+
+void NFA::positiveClosure()
+{
+    NFA nfa = nfa_stack.top();
+    nfa_stack.pop();
+
+    for (int state_i : nfa.end_states) // old end to starts
+    {
+        for (int state_j : nfa.start_states)
+        {
+            addTransition(state_i, "\\L", state_j);
+        }
+    }
+
+    for(auto state : nfa.states)
+    {
+        states[state.first] = state.second;
+    }
+    nfa_stack.push(*this);
+}
+
+void NFA::processSymbol(string symbol)
+{
+    int new_start_state = stateCounter++;
+    addState(new_start_state, false, true);
+
+    for(int i=0 ; i<symbol.length() ; i++)
+    {
+        if(i>0 && symbol[i--] == '\\')
+        {
+            continue;
+        }
+
+        char c = symbol[i];
+        int new_end_state = stateCounter++;
+        addState(new_end_state);
+
+        if(c == '\\')
+        {
+            addTransition(new_start_state, symbol.substr(i, 2), new_end_state);
+
+        }else{
+            addTransition(new_start_state, string(1, c), new_end_state);
+        }
+        new_start_state = new_end_state;
+    }
+    states[new_start_state].is_acceptance = true;
+    end_states.push_back(new_start_state);
+
+    nfa_stack.push(*this);
+}
+
+
+// -------------------Parser-------------------
 vector< string > Parser::get_rules_lines(string rules_file_path)
 {
     ifstream file(rules_file_path);
@@ -32,6 +252,7 @@ vector<string> Parser::get_keywords_lines(vector<string> rules)
     }
     return keywords;
 }
+
 vector<string> Parser::get_punctuation_lines(vector<string> rules)
 {
     vector<string> punctuations;
@@ -63,6 +284,7 @@ vector< pair<string, string> > Parser::get_regular_def_lines(vector<string> rule
     }
     return defs;
 }
+
 vector< pair<string, string> > Parser::get_regular_expr_lines(vector<string> rules)
 {
     vector< pair<string, string> > exprs;
@@ -81,6 +303,7 @@ vector< pair<string, string> > Parser::get_regular_expr_lines(vector<string> rul
     }
     return exprs;
 }
+
 string Parser::remove_pre_spaces(string s)
 {
     int i = 0;
@@ -90,6 +313,7 @@ string Parser::remove_pre_spaces(string s)
     }
     return s.substr(i);
 }
+
 string Parser::eliminate_back_slashes(string s)
 {
     string res = "";
@@ -112,6 +336,7 @@ string Parser::eliminate_back_slashes(string s)
     }
     return res;
 }
+
 vector<string> Parser::parse_keywords(vector<string> keywords_lines)
 {
     vector<string> keywords;
@@ -367,53 +592,90 @@ vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pa
     return res;
 }
 
+
+NFA convert_expr_postfix_to_NFA(vector< pair< string, vector<string> > > exprs)
+{
+    NFA res;
+    for(pair< string, vector<string> > expr : exprs)
+    {
+        for(string token : expr.second)
+        {
+            if(token.compare("*") == 0)
+            {
+                res.kleeneStar();
+            }
+            else if(token.compare("+") == 0)
+            {
+                res.positiveClosure();
+            }
+            else if(token.compare("|") == 0)
+            {
+                res.or_op();
+            }
+            else if(token.compare(".") == 0)
+            {
+                res.concatenate();
+            }
+            else
+            {
+                res.processSymbol(token);
+            }
+        }
+        for(int state_i : res.end_states)
+        {
+            NFA_State state = res.states[state_i];
+            if(state.token.compare("") == 0){
+                state.token = expr.first;
+                res.states[state_i] = state;
+            }
+        }
+    }
+    return res;
+}
+
+
 int main()
 {
-    // cout << ("|" + "") << endl;
     Parser p;
-    vector<string> rules = p.get_rules_lines("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/lexical_rules.txt");
-    // for(string rule : rules)
-    //     cout << rule << endl;
-    // cout << "******************************************************************" << endl;
+    vector<string> rules = p.get_rules_lines("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
-    // for(string keyword : keywords)
-    // {
-    //     cout << "*" <<keyword << "*" << endl;
-    // }
-    // cout << "******************************************************************" << endl;
 
     vector<string> punctuations_lines = p.get_punctuation_lines(rules);
     vector<string> punctuations = p.parse_keywords(punctuations_lines);
-    // for(string punctuation : punctuations)
-    //     cout << "*" <<punctuation << "*" << endl;
-    // cout << "******************************************************************" << endl;
-
-    
-    // vector<string> v = p.parse_rhs("   digits     ");
-    // for(string tok : v)
-    //     cout << "*" <<tok << "*" << endl;
-
 
     vector< pair<string, string> > defs_lines = p.get_regular_def_lines(rules);
     unordered_map< string, vector<string> > defs = p.parse_defs(defs_lines);
-    // for (const auto& pair : defs) {
-    //     std::cout << "key: " << pair.first << std::endl << "\t";
-    //     for(string tok : pair.second)
-    //         cout <<tok << " ";
-    //     cout << endl;
-    // }
 
     vector< pair<string, string> > expr_lines = p.get_regular_expr_lines(rules);
     vector< pair< string, vector<string> > > exprs = p.parse_expr(expr_lines, defs);
     exprs = p.convert_exprs_to_pos(exprs);
-    // for (const auto& pair : exprs) {
-    //     std::cout << "key: " << pair.first << std::endl << "\t";
-    //     for(string tok : pair.second)
-    //         cout <<tok << " ";
-    //     cout << endl;
-    // }
+    for (const auto& pair : exprs) {
+        std::cout << "key: " << pair.first << std::endl << "\t";
+        for(string tok : pair.second)
+            cout <<tok << " ";
+        cout << endl;
+    }
+
+    NFA exprs_nfa = convert_expr_postfix_to_NFA(exprs);
+    //print exprs_nfa
+    for(auto state : exprs_nfa.states)
+    {
+        cout << "state: " << state.first << endl;
+        cout << "\tis_acceptance: " << state.second.is_acceptance << endl;
+        cout << "\ttoken: " << state.second.token << endl;
+        cout << "\ttransitions: " << endl;
+        for(auto transition : state.second.transitions)
+        {
+            cout << "\t\t" << transition.first << ": ";
+            for(int to_state : transition.second)
+            {
+                cout << to_state << " ";
+            }
+            cout << endl;
+        }
+    }
 
     
     return 0;
