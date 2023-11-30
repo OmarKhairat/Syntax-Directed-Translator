@@ -349,6 +349,11 @@ vector<string> Parser::infixtoPos(vector<string> infix)
             pos.push_back(token);
         }
     }
+    while(!stck.empty())
+    {
+        pos.push_back(stck.top());
+        stck.pop();
+    }
     return pos;
 }
 
@@ -403,12 +408,12 @@ int main()
     vector< pair<string, string> > expr_lines = p.get_regular_expr_lines(rules);
     vector< pair< string, vector<string> > > exprs = p.parse_expr(expr_lines, defs);
     exprs = p.convert_exprs_to_pos(exprs);
-    for (const auto& pair : exprs) {
-        std::cout << "key: " << pair.first << std::endl << "\t";
-        for(string tok : pair.second)
-            cout <<tok << " ";
-        cout << endl;
-    }
+    // for (const auto& pair : exprs) {
+    //     std::cout << "key: " << pair.first << std::endl << "\t";
+    //     for(string tok : pair.second)
+    //         cout <<tok << " ";
+    //     cout << endl;
+    // }
 
     
     return 0;
