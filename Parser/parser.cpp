@@ -41,6 +41,14 @@ private:
     int stateCounter;
 };
 
+struct DFA_State
+{
+    set<int> nfa_states;
+    bool is_acceptance;
+    string token;
+    unordered_map<string, set<int>> transitions;
+};
+
 NFA::NFA()
 {
     stateCounter = 0;
@@ -292,6 +300,7 @@ void NFA::toJSON(string file_path)
     ofstream file(file_path);
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
+
         return; 
     }   
     file << "{" << endl;
@@ -363,6 +372,7 @@ vector< string > Parser::get_rules_lines(string rules_file_path)
     vector<string> rules;
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
+
         return rules; 
     }   
     string rule;
@@ -589,7 +599,9 @@ vector< string > Parser::parse_rhs(string rhs_line)
                     parsed_tokens.push_back(modifiy_dot_token(temp));
                 }
                 if(((last_temp.compare("|") != 0 && last_temp.compare("-") != 0 && last_temp.compare("(") != 0) || temp.compare("") != 0)
-                    && rhs_line[i + 1] != '|' && rhs_line[i + 1] != '-' && rhs_line[i + 1] != '+' 
+
+                    && rhs_line[i + 1] != '|' && rhs_line[i + 1] != '-' && rhs_line[i + 1] != '+'
+                   
                     && rhs_line[i + 1] != '*' && rhs_line[i + 1] != ')')
                 {
                     parsed_tokens.push_back(".");
@@ -787,6 +799,281 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
 }
 
 
+unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& nfa_states,
+                                           const vector<int>& nfa_start_states,
+                                           const vector<int>& nfa_end_states)
+{
+    unordered_map<int, DFA_State> dfa_states;
+    queue<set<int>> unmarked_states;
+    set<int> start_state_closure;
+    for (int start_state : nfa_start_states)
+    {
+        start_state_closure.insert(start_state);
+    }
+
+     std::cout << "nfa_end_states: ";
+    for (const int& state : nfa_end_states) {
+        std::cout << state << " ";
+    }
+    std::cout << std::endl;
+    unmarked_states.push(start_state_closure);
+    int dfa_state_id = 0;
+
+    while(!unmarked_states.empty())
+    {
+        DFA_State dfa_state;
+        dfa_state.nfa_states = unmarked_states.front();
+        unmarked_states.pop();
+        dfa_state.is_acceptance = false;
+        set<int> current_state =dfa_state.nfa_states;
+        for (int nfa_state : current_state)
+        {
+            if (find(nfa_end_states.begin(), nfa_end_states.end(), nfa_state) != nfa_end_states.end())
+            {
+                dfa_state.is_acceptance = true;
+                dfa_state.token = nfa_states.at(nfa_state).token;
+                break;
+            }
+        }
+
+         std::unordered_map<std::string, std::set<int>> combined_transitions;
+    for (int state : current_state)
+    {
+        // Get the transitions for the current state
+        const std::unordered_map<std::string, std::vector<int>> &transitions = nfa_states.at(state).transitions;
+
+        // Iterate through each transition
+        for (const auto &transition : transitions)
+        {
+            const std::string &input_symbol = transition.first;
+            const std::vector<int> &target_states = transition.second;
+
+            combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+        }
+    }
+        dfa_state.transitions = combined_transitions;
+        dfa_states[dfa_state_id] = dfa_state;
+          for (const auto& entry : combined_transitions) {
+        const std::set<int>& target_states = entry.second;
+        bool isNotInQueue = true;
+        for (std::queue<std::set<int>> tempQueue = unmarked_states; !tempQueue.empty(); tempQueue.pop()) {
+            if (tempQueue.front() == target_states) {
+                isNotInQueue = false;
+                break;
+            }
+        }
+
+          for (const auto& dfaEntry : dfa_states) {
+        const DFA_State& existingDFAState = dfaEntry.second;
+        if (existingDFAState.nfa_states == target_states) {
+            isNotInQueue = false;
+            break;
+        }
+    }
+        if (isNotInQueue) {
+            unmarked_states.push(target_states);
+        }
+    }
+        dfa_state_id++;
+    }
+    return dfa_states;
+}
+
+
+int getDFAStateIDFromNFAStates(const std::unordered_map<int, DFA_State>& dfa_states, int target_nfa_state) {
+    for (const auto& dfa_entry : dfa_states) {
+        const DFA_State& dfa_state = dfa_entry.second;
+        if (dfa_state.nfa_states.find(target_nfa_state) != dfa_state.nfa_states.end()) {
+            return dfa_entry.first;  // Return the ID of the DFA state containing the target NFA state
+        }
+    }
+    // If not found, return some default value indicating an error
+    return -1;  // You may want to choose a more suitable default value based on your application
+}
+std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<int, DFA_State>& dfa_states) {
+    std::unordered_map<int, DFA_State> updated_dfa_states;
+
+    for (const auto& dfa_entry : dfa_states) {
+        const DFA_State& dfa_state = dfa_entry.second;
+        DFA_State updated_dfa_state = dfa_state;  // Make a copy
+
+        for (auto& transition_entry : updated_dfa_state.transitions) {
+            const std::string& transition_key = transition_entry.first;
+            std::set<int>& nfa_states = transition_entry.second;
+
+            // Create a new set to store the updated IDs
+            std::set<int> updated_nfa_states;
+
+            // Iterate over the original set and replace with corresponding IDs
+            for (int nfa_state : nfa_states) {
+                // Use the function to get the ID from the set of DFA states
+                int dfa_state_id = getDFAStateIDFromNFAStates(dfa_states, nfa_state);
+
+                // Add the ID to the updated set
+                updated_nfa_states.insert(dfa_state_id);
+            }
+
+            // Update the transitions with the new set of IDs
+            transition_entry.second = updated_nfa_states;
+        }
+
+        // Add the updated DFA state to the result map
+        updated_dfa_states[dfa_entry.first] = updated_dfa_state;
+    }
+
+    return updated_dfa_states;
+}
+
+
+// Function to minimize a DFA
+std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states) {
+    std::unordered_set<int> acceptance_states;
+    std::unordered_set<int> non_acceptance_states;
+    for (const auto& entry : dfa_states) {
+        if (entry.second.is_acceptance) {
+            acceptance_states.insert(entry.first);
+        } else {
+            non_acceptance_states.insert(entry.first);
+        }
+    }
+    // Helper function to check if two states are equivalent
+    auto areEquivalent = [](const DFA_State& state1, const DFA_State& state2) {
+    return (state1.is_acceptance == state2.is_acceptance) &&
+           (state1.transitions == state2.transitions);
+       };
+
+    int id =0;
+    std::vector<std::unordered_set<int>> equivalenceClassesNonAcceptance;
+    std::vector<int> equivalenceClassNonIds;
+    for (int state : non_acceptance_states) {
+        bool found = false;
+        for (auto& equivalenceClass : equivalenceClassesNonAcceptance) {
+            if (areEquivalent(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
+                equivalenceClass.insert(state);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            equivalenceClassesNonAcceptance.push_back({state});
+            equivalenceClassNonIds.push_back(id++);
+        }
+    }
+
+
+    std::vector<int> equivalenceClassIds;
+    std::vector<std::unordered_set<int>> equivalenceClassesAcceptance;
+    for (int state : acceptance_states) {
+        bool found = false;
+        for (auto& equivalenceClass : equivalenceClassesAcceptance) {
+            if (areEquivalent(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
+                equivalenceClass.insert(state);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            equivalenceClassesAcceptance.push_back({state});
+            equivalenceClassIds.push_back(id++);
+        }
+    }
+
+    std::unordered_map<int, DFA_State> minimizedDFA;
+    for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
+        int id = equivalenceClassIds[i];
+        DFA_State newState;
+        newState.is_acceptance = true;
+        newState.token = dfa_states.at(*equivalenceClassesAcceptance[i].begin()).token; // Get token from the first state
+         std::set<int> nfaStatesSet(equivalenceClassesAcceptance[i].begin(), equivalenceClassesAcceptance[i].end());
+         newState.nfa_states = nfaStatesSet;
+        minimizedDFA[id] = newState;
+    }
+    for (size_t i = 0; i < equivalenceClassesNonAcceptance.size(); ++i) {
+        int id = equivalenceClassNonIds[i];
+        DFA_State newState;
+        newState.is_acceptance = false;
+        std::set<int> nfaStatesSet(equivalenceClassesNonAcceptance[i].begin(), equivalenceClassesNonAcceptance[i].end());
+         newState.nfa_states = nfaStatesSet;
+        minimizedDFA[id] = newState;
+    }
+    for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
+        int id = equivalenceClassIds[i];
+        int reusult = 0;
+        for (const auto& transition : dfa_states.at(*equivalenceClassesAcceptance[i].begin()).transitions) {
+            std::string input = transition.first;
+            int targetStateId = -1;
+            for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
+                auto& currentSet = equivalenceClassesAcceptance[j];
+                for (const auto& entry : dfa_states) {
+                    const DFA_State& dfaState = entry.second;
+                    int targetNFAState = *(transition.second.begin());
+        // Check if the target NFA state is present in the set of NFA states for this DFA state
+                    if (dfaState.nfa_states.find(targetNFAState) != dfaState.nfa_states.end()) {
+                        reusult = entry.first;
+                        break; // Add the ID of the DFA state to the result set
+                        }
+                    }
+                    auto setIterator = currentSet.find(reusult);
+                        if (setIterator != currentSet.end()) {
+                            targetStateId = equivalenceClassIds[j];
+                            break;
+                        }
+            }
+            if (targetStateId == -1) {
+            for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
+            auto& currentSet = equivalenceClassesNonAcceptance[j];
+            auto setIterator = currentSet.find(reusult);
+            if (setIterator != currentSet.end()) {
+                targetStateId = equivalenceClassNonIds[j];
+                break;
+                }
+            }
+        }
+        minimizedDFA[id].transitions[input].insert(targetStateId);
+        }
+    }
+
+    for (size_t i = 0; i < equivalenceClassesNonAcceptance.size(); ++i) {
+        int id = equivalenceClassNonIds[i];
+        int reusult = 0;
+        for (const auto& transition : dfa_states.at(*equivalenceClassesNonAcceptance[i].begin()).transitions) {
+            std::string input = transition.first;
+            int targetStateId = -1; // Default value if not found
+            // Search for the target state in equivalenceClassesNonAcceptance
+           for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
+                auto& currentSet = equivalenceClassesNonAcceptance[j];
+                for (const auto& entry : dfa_states) {
+                    const DFA_State& dfaState = entry.second;
+        // Check if the target NFA state is present in the set of NFA states for this DFA state
+                    if (dfaState.nfa_states.find(*(transition.second.begin())) != dfaState.nfa_states.end()) {
+                            reusult = entry.first;
+                            break; // Add the ID of the DFA state to the result set
+                    }
+                }
+                auto setIterator = currentSet.find(reusult);
+                if (setIterator != currentSet.end()) {
+                targetStateId = equivalenceClassNonIds[j];
+                break;
+                }
+            }
+
+    if (targetStateId == -1) {
+    for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
+        auto& currentSet = equivalenceClassesAcceptance[j];
+        auto setIterator = currentSet.find(reusult);
+        if (setIterator != currentSet.end()) {
+            targetStateId = equivalenceClassIds[j];
+            break;
+                    }
+                }
+            }
+            minimizedDFA[id].transitions[input].insert(targetStateId);
+        }
+    }
+
+    return minimizedDFA;
+}
+
 int main()
 {
     Parser p;
@@ -812,7 +1099,96 @@ int main()
     // }
 
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
-    exprs_nfa.toJSON("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/NFA.json");
+
+    exprs_nfa.toJSON("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
+
+    unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
+    unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
+    // Open a file for writing
+    /*
+    std::ofstream outFile("dfa_states_output.txt");
+
+    // Check if the file is open
+    if (!outFile.is_open()) {
+        std::cerr << "Error opening file for writing." << std::endl;
+        return 1;
+    }
+
+    // Iterate through the DFA states map and write to the file
+    for (const auto& entry : modified_dfa_states) {
+        int dfa_state_id = entry.first;
+        const DFA_State& dfa_state = entry.second;
+        outFile << "DFA State ID: " << dfa_state_id << "\n";
+        outFile << "NFA States: ";
+        for (const int& nfa_state : dfa_state.nfa_states) {
+            outFile << nfa_state << " ";
+        }
+        outFile << "\n";
+        outFile << "Is Acceptance: " << (dfa_state.is_acceptance ? "true" : "false") << "\n";
+        outFile << "Token: " << dfa_state.token << "\n";
+        outFile << "Transitions:\n";
+        for (const auto& transition : dfa_state.transitions) {
+            const std::string& input_symbol = transition.first;
+            const std::set<int>& target_states = transition.second;
+            outFile << "  " << input_symbol << " -> ";
+            for (const int& target_state : target_states) {
+                outFile << target_state << " ";
+            }
+            outFile << "\n";
+        }
+
+        outFile << "\n";
+    }
+
+    // Close the file
+    outFile.close();
+*/
+    std::cout << "DFA states written to dfa_states_output.txt" << std::endl;
+     unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states);
+     /*
+     std::size_t mapSize2 = minimzed_dfa_states.size();
+    std::cout << "Size of the unordered_map: " << mapSize2 << std::endl;
+    std::ofstream outFile2("dfa_states_output2.txt");
+
+    // Check if the file is open
+    if (!outFile2.is_open()) {
+        std::cerr << "Error opening file for writing." << std::endl;
+        return 1;
+    }
+
+    // Iterate through the DFA states map and write to the file
+    for (const auto& entry : minimzed_dfa_states) {
+        int dfa_state_id = entry.first;
+        const DFA_State& dfa_state = entry.second;
+
+        outFile2 << "DFA State Minimzed ID: " << dfa_state_id << "\n";
+        outFile2 << "DFA States: ";
+        for (const int& nfa_state : dfa_state.nfa_states) {
+            outFile2 << nfa_state << " ";
+        }
+        outFile2 << "\n";
+        outFile2 << "Is Acceptance: " << (dfa_state.is_acceptance ? "true" : "false") << "\n";
+        outFile2 << "Token: " << dfa_state.token << "\n";
+
+        outFile2 << "Transitions:\n";
+        for (const auto& transition : dfa_state.transitions) {
+            const std::string& input_symbol = transition.first;
+            const std::set<int>& target_states = transition.second;
+
+            outFile2 << "  " << input_symbol << " -> ";
+            for (const int& target_state : target_states) {
+                outFile2 << target_state << " ";
+            }
+            outFile2 << "\n";
+        }
+
+        outFile2 << "\n";
+    }
+
+    // Close the file
+    outFile2.close();
+*/
+
     return 0;
 }
