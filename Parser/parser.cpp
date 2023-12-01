@@ -41,6 +41,14 @@ private:
     int stateCounter;
 };
 
+struct DFA_State
+{
+    set<int> nfa_states;
+    bool is_acceptance;
+    string token;
+    unordered_map<string, int> transitions;
+};
+
 NFA::NFA()
 {
     stateCounter = 0;
@@ -786,6 +794,194 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     return res;
 }
 
+unordered_map<int, NFA_State> constructDFA(const unordered_map<int, NFA_State>& nfa_states,
+                                           const vector<int>& nfa_start_states,
+                                           const vector<int>& nfa_end_states)
+{
+    unordered_map<int, DFA_State> dfa_states;
+    queue<set<int>> unmarked_states;
+    set<int> start_state_closure;
+    for (int start_state : nfa_start_states)
+    {
+        start_state_closure.insert(start_state);
+    }
+    unmarked_states.push(start_state_closure);
+    while (!unmarked_states.empty())
+    {
+        set<int> current_nfa_states = unmarked_states.front();
+        unmarked_states.pop();
+
+        if (dfa_states.find(current_nfa_states) != dfa_states.end())
+        {
+            continue; 
+        }
+
+        DFA_State dfa_state;
+        dfa_state.nfa_states = current_nfa_states;
+        dfa_state.is_acceptance = false;
+
+        for (int nfa_state : current_nfa_states)
+        {
+            if (nfa_states.at(nfa_state).is_acceptance)
+            {
+                dfa_state.is_acceptance = true;
+                dfa_state.token = nfa_states.at(nfa_state).token;
+                break;
+            }
+        }
+
+        for (const auto& transition : nfa_states.at(*current_nfa_states.begin()).transitions)
+        {
+            set<int> next_states;
+
+            for (int nfa_state : current_nfa_states)
+            {
+                for (int next_state : nfa_states.at(nfa_state).transitions[transition.first])
+                {
+                    next_states.insert(next_state);
+                }
+            }
+
+            dfa_state.transitions[transition.first] = next_states;
+
+            if (find(unmarked_states.begin(), unmarked_states.end(), next_states) == unmarked_states.end())
+            {
+                unmarked_states.push(next_states);
+            }
+        }
+
+        dfa_states[current_nfa_states] = dfa_state;
+    }
+
+    unordered_map<int, NFA_State> result;
+    for (const auto& dfa_state_pair : dfa_states)
+    {
+        NFA_State nfa_state;
+        nfa_state.id = dfa_state_pair.first;
+        nfa_state.is_acceptance = dfa_state_pair.second.is_acceptance;
+        nfa_state.token = dfa_state_pair.second.token;
+
+        for (const auto& transition : dfa_state_pair.second.transitions)
+        {
+            nfa_state.transitions[transition.first] = vector<int>(transition.second.begin(), transition.second.end());
+        }
+
+        result[nfa_state.id] = nfa_state;
+    }
+
+    return result;
+}
+
+unordered_map<int, NFA_State> minimizeDFA(const unordered_map<int, NFA_State>& dfa_states)
+{
+    vector<set<int>> partition;
+    set<int> accepting_states, non_accepting_states;
+    for (const auto& dfa_state_pair : dfa_states)
+    {
+        if (dfa_state_pair.second.is_acceptance)
+            accepting_states.insert(dfa_state_pair.first);
+        else
+            non_accepting_states.insert(dfa_state_pair.first);
+    }
+    partition.push_back(accepting_states);
+    partition.push_back(non_accepting_states);
+    while (true)
+    {
+        vector<set<int>> new_partition;
+
+        for (const auto& block : partition)
+        {
+            if (block.size() > 1)
+            {
+                unordered_map<string, set<int>> transition_blocks;
+                for (int state : block)
+                {
+                    const auto& transitions = dfa_states.at(state).transitions;
+                    for (const auto& transition : transitions)
+                    {
+                        int next_state = *transition.second.begin();
+                        for (const auto& existing_block : partition)
+                        {
+                            if (existing_block.count(next_state) > 0)
+                            {
+                                transition_blocks[transition.first].insert(next_state);
+                                break;
+                            }
+                        }
+                    }
+                }
+                for (const auto& transition_block : transition_blocks)
+                {
+                    new_partition.push_back(transition_block.second);
+                }
+            }
+            else
+            {
+                new_partition.push_back(block);
+            }
+        }
+
+        if (new_partition == partition)
+        {
+            break; 
+        }
+        partition = new_partition;
+    }
+    unordered_map<int, NFA_State> minimized_dfa;
+    for (int state_id = 0; state_id < partition.size(); ++state_id)
+    {
+        for (int nfa_state : partition[state_id])
+        {
+            const auto& original_state = dfa_states.at(nfa_state);
+            NFA_State minimized_state = {state_id, original_state.is_acceptance, original_state.token, {}};
+
+            for (const auto& transition : original_state.transitions)
+            {
+                const string& symbol = transition.first;
+                const int next_state = *transition.second.begin();
+
+                for (int i = 0; i < partition.size(); ++i)
+                {
+                    if (partition[i].count(next_state) > 0)
+                    {
+                        minimized_state.transitions[symbol].push_back(i);
+                        break;
+                    }
+                }
+            }
+
+            minimized_dfa[state_id] = minimized_state;
+        }
+    }
+    return minimized_dfa;
+}
+
+
+unordered_map<int, unordered_map<string, int>> generateTransitionTable(const unordered_map<int, NFA_State>& minimized_dfa)
+{
+    unordered_map<int, unordered_map<string, int>> transition_table;
+
+    for (const auto& dfa_state_pair : minimized_dfa)
+    {
+        int state_id = dfa_state_pair.first;
+        const auto& dfa_state = dfa_state_pair.second;
+
+        unordered_map<string, int> transitions;
+
+        for (const auto& transition : dfa_state.transitions)
+        {
+            const string& symbol = transition.first;
+            const int next_state = *transition.second.begin(); 
+
+            transitions[symbol] = next_state;
+        }
+
+        transition_table[state_id] = transitions;
+    }
+
+    return transition_table;
+}
+
 
 int main()
 {
@@ -814,5 +1010,18 @@ int main()
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
     exprs_nfa.toJSON("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
+
+    unordered_map<int, NFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
+    unordered_map<int, NFA_State> minimized_dfa = minimizeDFA(dfa_states);
+    unordered_map<int, unordered_map<string, int>> transition_table = generateTransitionTable(minimized_dfa);
+     for (const auto& state_transitions : transition_table)
+    {
+        cout << "State " << state_transitions.first << ":\n";
+        for (const auto& transition : state_transitions.second)
+        {
+            cout << "  " << transition.first << " -> " << transition.second << "\n";
+        }
+        cout << "\n";
+    }
     return 0;
 }
