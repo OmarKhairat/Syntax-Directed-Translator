@@ -877,7 +877,6 @@ unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& 
 
 // Function to minimize a DFA
 std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states) {
-    // Group states into acceptance and non-acceptance sets
     std::unordered_set<int> acceptance_states;
     std::unordered_set<int> non_acceptance_states;
     for (const auto& entry : dfa_states) {
@@ -888,16 +887,14 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         }
     }
     // Helper function to check if two states are equivalent
-   auto areEquivalent = [](const DFA_State& state1, const DFA_State& state2) {
+    auto areEquivalent = [](const DFA_State& state1, const DFA_State& state2) {
     return (state1.is_acceptance == state2.is_acceptance) &&
            (state1.transitions == state2.transitions);
-};
-    // Minimize acceptance states
-
+       };
 
     int id =0;
-        std::vector<std::unordered_set<int>> equivalenceClassesNonAcceptance;
-   std::vector<int> equivalenceClassNonIds;
+    std::vector<std::unordered_set<int>> equivalenceClassesNonAcceptance;
+    std::vector<int> equivalenceClassNonIds;
     for (int state : non_acceptance_states) {
         bool found = false;
         for (auto& equivalenceClass : equivalenceClassesNonAcceptance) {
@@ -912,9 +909,10 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
             equivalenceClassNonIds.push_back(id++);
         }
     }
-      std::vector<int> equivalenceClassIds;
-    std::vector<std::unordered_set<int>> equivalenceClassesAcceptance;
 
+
+    std::vector<int> equivalenceClassIds;
+    std::vector<std::unordered_set<int>> equivalenceClassesAcceptance;
     for (int state : acceptance_states) {
         bool found = false;
         for (auto& equivalenceClass : equivalenceClassesAcceptance) {
@@ -929,100 +927,99 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
             equivalenceClassIds.push_back(id++);
         }
     }
-    // Minimize non-acceptance states
 
-
-    // Build the minimized DFA
     std::unordered_map<int, DFA_State> minimizedDFA;
-
-      for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
+    for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
         int id = equivalenceClassIds[i];
         DFA_State newState;
         newState.is_acceptance = true;
         newState.token = dfa_states.at(*equivalenceClassesAcceptance[i].begin()).token; // Get token from the first state
+         std::set<int> nfaStatesSet(equivalenceClassesAcceptance[i].begin(), equivalenceClassesAcceptance[i].end());
+         newState.nfa_states = nfaStatesSet;
         minimizedDFA[id] = newState;
     }
-
-    // Populate the minimizedDFA with non-acceptance states
     for (size_t i = 0; i < equivalenceClassesNonAcceptance.size(); ++i) {
         int id = equivalenceClassNonIds[i];
         DFA_State newState;
         newState.is_acceptance = false;
-        // Assuming that the token for non-acceptance states is not relevant, you may adjust accordingly
+        std::set<int> nfaStatesSet(equivalenceClassesNonAcceptance[i].begin(), equivalenceClassesNonAcceptance[i].end());
+         newState.nfa_states = nfaStatesSet;
         minimizedDFA[id] = newState;
     }
-
-       for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
+    for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
         int id = equivalenceClassIds[i];
+        int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
-            int targetStateId = -1; // Default value if not found
-            // Search for the target state in equivalenceClassesAcceptance
-           for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
-                            auto& currentSet = equivalenceClassesAcceptance[j];
-                              std::cout << "Current Set Elements:";
-    for (const auto& element : currentSet) {
-        std::cout << " " << element;
-    }
-    std::cout << std::endl;
-    std::cout << "Value to search for: " << *transition.second.begin() << std::endl;
-                    auto setIterator = currentSet.find(*transition.second.begin());
+            int targetStateId = -1;
+            for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
+                auto& currentSet = equivalenceClassesAcceptance[j];
+                for (const auto& entry : dfa_states) {
+                    const DFA_State& dfaState = entry.second;
+                    int targetNFAState = *(transition.second.begin());
+        // Check if the target NFA state is present in the set of NFA states for this DFA state
+                    if (dfaState.nfa_states.find(targetNFAState) != dfaState.nfa_states.end()) {
+                        reusult = entry.first;
+                        break; // Add the ID of the DFA state to the result set
+                        }
+                    }
+                    auto setIterator = currentSet.find(reusult);
                         if (setIterator != currentSet.end()) {
-                        targetStateId = equivalenceClassIds[j];
-                    break;
-                }
+                            targetStateId = equivalenceClassIds[j];
+                            break;
+                        }
             }
             if (targetStateId == -1) {
-    for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
-        auto& currentSet = equivalenceClassesNonAcceptance[j];
-        auto setIterator = currentSet.find(*transition.second.begin());
-         for (const auto& element : currentSet) {
-        std::cout << " " << element;
-    }
-    std::cout << std::endl;
-        if (setIterator != currentSet.end()) {
-            targetStateId = equivalenceClassNonIds[j];
-            break;
+            for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
+            auto& currentSet = equivalenceClassesNonAcceptance[j];
+            auto setIterator = currentSet.find(reusult);
+            if (setIterator != currentSet.end()) {
+                targetStateId = equivalenceClassNonIds[j];
+                break;
+                }
+            }
         }
-    }
-}
-            minimizedDFA[id].transitions[input].insert(targetStateId);
+        minimizedDFA[id].transitions[input].insert(targetStateId);
         }
     }
 
-    // Populate transitions for non-acceptance states
     for (size_t i = 0; i < equivalenceClassesNonAcceptance.size(); ++i) {
         int id = equivalenceClassNonIds[i];
+        int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesNonAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
             int targetStateId = -1; // Default value if not found
             // Search for the target state in equivalenceClassesNonAcceptance
            for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
                 auto& currentSet = equivalenceClassesNonAcceptance[j];
-
-                auto setIterator = currentSet.find(*transition.second.begin());
-
+                for (const auto& entry : dfa_states) {
+                    const DFA_State& dfaState = entry.second;
+        // Check if the target NFA state is present in the set of NFA states for this DFA state
+                    if (dfaState.nfa_states.find(*(transition.second.begin())) != dfaState.nfa_states.end()) {
+                            reusult = entry.first;
+                            break; // Add the ID of the DFA state to the result set
+                    }
+                }
+                auto setIterator = currentSet.find(reusult);
                 if (setIterator != currentSet.end()) {
                 targetStateId = equivalenceClassNonIds[j];
                 break;
                 }
             }
 
-            if (targetStateId == -1) {
+    if (targetStateId == -1) {
     for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
         auto& currentSet = equivalenceClassesAcceptance[j];
-        auto setIterator = currentSet.find(*transition.second.begin());
-
+        auto setIterator = currentSet.find(reusult);
         if (setIterator != currentSet.end()) {
             targetStateId = equivalenceClassIds[j];
             break;
-        }
-    }
-}
+                    }
+                }
+            }
             minimizedDFA[id].transitions[input].insert(targetStateId);
         }
     }
-
 
     return minimizedDFA;
 }
@@ -1117,10 +1114,10 @@ int main()
         int dfa_state_id = entry.first;
         const DFA_State& dfa_state = entry.second;
 
-        outFile2 << "DFA State ID: " << dfa_state_id << "\n";
-        outFile2 << "NFA States: ";
+        outFile2 << "DFA State Minimzed ID: " << dfa_state_id << "\n";
+        outFile2 << "DFA States: ";
         for (const int& nfa_state : dfa_state.nfa_states) {
-            outFile << nfa_state << " ";
+            outFile2 << nfa_state << " ";
         }
         outFile2 << "\n";
         outFile2 << "Is Acceptance: " << (dfa_state.is_acceptance ? "true" : "false") << "\n";
