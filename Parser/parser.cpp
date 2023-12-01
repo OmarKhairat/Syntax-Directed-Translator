@@ -1100,6 +1100,7 @@ int main()
     unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
     unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
+    /*
     std::ofstream outFile("dfa_states_output.txt");
 
     // Check if the file is open
@@ -1136,9 +1137,10 @@ int main()
 
     // Close the file
     outFile.close();
-
+*/
     std::cout << "DFA states written to dfa_states_output.txt" << std::endl;
      unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states);
+     /*
      std::size_t mapSize2 = minimzed_dfa_states.size();
     std::cout << "Size of the unordered_map: " << mapSize2 << std::endl;
     std::ofstream outFile2("dfa_states_output2.txt");
@@ -1180,7 +1182,7 @@ int main()
 
     // Close the file
     outFile2.close();
-
+*/
 
     return 0;
 }
