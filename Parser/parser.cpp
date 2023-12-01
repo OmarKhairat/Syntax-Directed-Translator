@@ -300,8 +300,9 @@ void NFA::toJSON(string file_path)
     ofstream file(file_path);
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
-        return;
-    }
+
+        return; 
+    }   
     file << "{" << endl;
     file << "\t\"start_states\": [" << endl;
     for(int i = 0 ; i < start_states.size() ; i++)
@@ -371,8 +372,9 @@ vector< string > Parser::get_rules_lines(string rules_file_path)
     vector<string> rules;
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
-        return rules;
-    }
+
+        return rules; 
+    }   
     string rule;
     while (getline(file, rule)) {
         rules.push_back(rule);
@@ -597,7 +599,9 @@ vector< string > Parser::parse_rhs(string rhs_line)
                     parsed_tokens.push_back(modifiy_dot_token(temp));
                 }
                 if(((last_temp.compare("|") != 0 && last_temp.compare("-") != 0 && last_temp.compare("(") != 0) || temp.compare("") != 0)
+
                     && rhs_line[i + 1] != '|' && rhs_line[i + 1] != '-' && rhs_line[i + 1] != '+'
+                   
                     && rhs_line[i + 1] != '*' && rhs_line[i + 1] != ')')
                 {
                     parsed_tokens.push_back(".");
@@ -683,7 +687,7 @@ vector<string> Parser::infixtoPos(vector<string> infix)
     stack<string> stck;
     unordered_map<string, int> special_chars;
     special_chars["*"] = 5; special_chars["+"] = 4;
-    special_chars["."] = 3; special_chars["|"] = 2;
+    special_chars["."] = 3; special_chars["|"] = 2; 
     special_chars["("] = special_chars[")"] = 0;
     for(string token : infix)
     {
@@ -793,6 +797,7 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     res.concatenateAllStack();
     return res;
 }
+
 
 unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& nfa_states,
                                            const vector<int>& nfa_start_states,
@@ -1072,7 +1077,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
 int main()
 {
     Parser p;
-    vector<string> rules = p.get_rules_lines("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/lexical_rules.txt");
+    vector<string> rules = p.get_rules_lines("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
@@ -1094,6 +1099,7 @@ int main()
     // }
 
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
+
     exprs_nfa.toJSON("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
