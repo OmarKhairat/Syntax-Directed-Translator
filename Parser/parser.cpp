@@ -875,6 +875,51 @@ unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& 
 }
 
 
+int getDFAStateIDFromNFAStates(const std::unordered_map<int, DFA_State>& dfa_states, int target_nfa_state) {
+    for (const auto& dfa_entry : dfa_states) {
+        const DFA_State& dfa_state = dfa_entry.second;
+        if (dfa_state.nfa_states.find(target_nfa_state) != dfa_state.nfa_states.end()) {
+            return dfa_entry.first;  // Return the ID of the DFA state containing the target NFA state
+        }
+    }
+    // If not found, return some default value indicating an error
+    return -1;  // You may want to choose a more suitable default value based on your application
+}
+std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<int, DFA_State>& dfa_states) {
+    std::unordered_map<int, DFA_State> updated_dfa_states;
+
+    for (const auto& dfa_entry : dfa_states) {
+        const DFA_State& dfa_state = dfa_entry.second;
+        DFA_State updated_dfa_state = dfa_state;  // Make a copy
+
+        for (auto& transition_entry : updated_dfa_state.transitions) {
+            const std::string& transition_key = transition_entry.first;
+            std::set<int>& nfa_states = transition_entry.second;
+
+            // Create a new set to store the updated IDs
+            std::set<int> updated_nfa_states;
+
+            // Iterate over the original set and replace with corresponding IDs
+            for (int nfa_state : nfa_states) {
+                // Use the function to get the ID from the set of DFA states
+                int dfa_state_id = getDFAStateIDFromNFAStates(dfa_states, nfa_state);
+
+                // Add the ID to the updated set
+                updated_nfa_states.insert(dfa_state_id);
+            }
+
+            // Update the transitions with the new set of IDs
+            transition_entry.second = updated_nfa_states;
+        }
+
+        // Add the updated DFA state to the result map
+        updated_dfa_states[dfa_entry.first] = updated_dfa_state;
+    }
+
+    return updated_dfa_states;
+}
+
+
 // Function to minimize a DFA
 std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states) {
     std::unordered_set<int> acceptance_states;
@@ -1053,11 +1098,9 @@ int main()
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
     unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
-    std::size_t mapSize = dfa_states.size();
-    std::cout << "Size of the unordered_map: " << mapSize << std::endl;
+    unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
     std::ofstream outFile("dfa_states_output.txt");
-
 
     // Check if the file is open
     if (!outFile.is_open()) {
@@ -1066,10 +1109,9 @@ int main()
     }
 
     // Iterate through the DFA states map and write to the file
-    for (const auto& entry : dfa_states) {
+    for (const auto& entry : modified_dfa_states) {
         int dfa_state_id = entry.first;
         const DFA_State& dfa_state = entry.second;
-
         outFile << "DFA State ID: " << dfa_state_id << "\n";
         outFile << "NFA States: ";
         for (const int& nfa_state : dfa_state.nfa_states) {
@@ -1078,12 +1120,10 @@ int main()
         outFile << "\n";
         outFile << "Is Acceptance: " << (dfa_state.is_acceptance ? "true" : "false") << "\n";
         outFile << "Token: " << dfa_state.token << "\n";
-
         outFile << "Transitions:\n";
         for (const auto& transition : dfa_state.transitions) {
             const std::string& input_symbol = transition.first;
             const std::set<int>& target_states = transition.second;
-
             outFile << "  " << input_symbol << " -> ";
             for (const int& target_state : target_states) {
                 outFile << target_state << " ";
