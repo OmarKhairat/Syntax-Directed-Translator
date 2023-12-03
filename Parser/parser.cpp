@@ -40,7 +40,6 @@ public:
     void positiveClosure();
     void processSymbol(string symbol);
     unordered_map< int, set<int> > getEpsilonClosureSetMap();
-    void epsilonNFA_to_NFA(unordered_map<string, int> priority);
     void toJSON(string file_path);
     unordered_map< int, NFA_State > states;
     vector<int> start_states;
@@ -322,61 +321,6 @@ unordered_map< int, set<int> > NFA::getEpsilonClosureSetMap()
         epsilon_closure_set[state_id] = epsilon_closure_i;
     }
     return epsilon_closure_set;
-}
-
-void NFA::epsilonNFA_to_NFA(unordered_map<string, int> priority)
-{
-    unordered_map<int, set<int>> epsilon_closure_set = getEpsilonClosureSetMap();
-
-    // handle transitions
-    for(unsigned int state_id = 0; state_id < states.size() ; state_id++){
-        NFA_State &state_i = states[state_id];
-
-        // get combined transitions
-        unordered_map<string, set<int>> combined_transitions;
-        for(int state : epsilon_closure_set[state_id]){
-            // Get the transitions for the current state
-            const std::unordered_map<std::string, std::set<int>> &transitions = states[state].transitions;
-            // Iterate through each transition
-            for (const auto &transition : transitions){
-                const std::string &input_symbol = transition.first;
-                const std::set<int> &target_states = transition.second;
-                if(input_symbol.compare("\\L") != 0){
-                    combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
-                }
-            }
-        }
-
-        for(auto &transition : combined_transitions){
-            set<int> &target_states = transition.second;
-
-            // covert each transition set to its epsilon closure
-            set<int> target_states_epsilon_closure;
-            for(int target_state : target_states){
-                target_states_epsilon_closure.insert(epsilon_closure_set[target_state].begin(), epsilon_closure_set[target_state].end());
-            }
-            combined_transitions[transition.first] = target_states_epsilon_closure;
-            target_states = target_states_epsilon_closure;
-
-        }
-        // add transitions to the state
-        state_i.transitions = combined_transitions;
-        
-        // set acceptance states
-        for(int ep_state_id : epsilon_closure_set[state_id]){
-            if(states[ep_state_id].is_acceptance){
-                if(state_i.is_acceptance){
-                    if(priority[state_i.token] > priority[states[ep_state_id].token]){
-                        state_i.token = states[ep_state_id].token;
-                    }
-                }else{
-                    state_i.is_acceptance = true;
-                    state_i.token = states[ep_state_id].token;
-                }
-            }
-        }
-        states[state_id] = state_i;
-    }
 }
 
 void NFA::toJSON(string file_path)
@@ -823,15 +767,30 @@ vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pa
     return res;
 }
 
-
-NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
+unordered_map<string, int> getPriority(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
 {
-    NFA res;
     unordered_map<string, int> priority;
 
     for(string keyword : keywords)
     {
         priority[keyword] = 0;
+    }
+    for(string punctuation : punctuations)
+    {
+        priority[punctuation] = 0;
+    }
+    for(int i = 0 ; i < exprs.size() ; i++)
+    {
+        priority[exprs[i].first] = i+1;
+    }    
+    return priority;
+}
+
+NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations, unordered_map<string, int> priority)
+{
+    NFA res;
+    for(string keyword : keywords)
+    {
         res.processSymbol(keyword);
         NFA expr_nfa = res.pop();
         for(int state_i : expr_nfa.end_states) // set token of acceptance states
@@ -842,7 +801,6 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     }
     for(string punctuation : punctuations)
     {
-        priority[punctuation] = 0;
         res.processSymbol(punctuation);
         NFA expr_nfa = res.pop();
         for(int state_i : expr_nfa.end_states) // set token of acceptance states
@@ -854,7 +812,6 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     for(int i = 0 ; i < exprs.size() ; i++)
     {
         pair< string, vector<string> > expr = exprs[i];
-        priority[expr.first] = i+1;
         for(string token : expr.second)
         {
             if(token.compare("*") == 0)
@@ -888,8 +845,6 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     }    
 
     res.concatenateAllStack();
-    res.epsilonNFA_to_NFA(priority);
-
     return res;
 }
 
@@ -1218,15 +1173,17 @@ int main()
     //     cout << endl;
     // }
 
-    NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
+    unordered_map<string, int> priority = getPriority(exprs, keywords, punctuations);
+
+    NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations, priority);
     exprs_nfa.toJSON("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
-    unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
+    unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa, priority);
     unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
-    /*
-    std::ofstream outFile("dfa_states_output.txt");
+    
+    std::ofstream outFile("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/dfa_states_output.txt");
 
     // Check if the file is open
     if (!outFile.is_open()) {
@@ -1262,13 +1219,15 @@ int main()
 
     // Close the file
     outFile.close();
-*/
+
+
     std::cout << "DFA states written to dfa_states_output.txt" << std::endl;
      unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states);
-     /*
+
+
      std::size_t mapSize2 = minimzed_dfa_states.size();
     std::cout << "Size of the unordered_map: " << mapSize2 << std::endl;
-    std::ofstream outFile2("dfa_states_output2.txt");
+    std::ofstream outFile2("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/dfa_states_output2.txt");
 
     // Check if the file is open
     if (!outFile2.is_open()) {
@@ -1307,7 +1266,7 @@ int main()
 
     // Close the file
     outFile2.close();
-*/
+
 
     return 0;
 }
