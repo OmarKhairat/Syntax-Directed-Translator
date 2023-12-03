@@ -329,8 +329,8 @@ void NFA::toJSON(string file_path)
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
 
-        return; 
-    }   
+        return;
+    }
     file << "{" << endl;
     file << "\t\"start_states\": [" << endl;
     for(int i = 0 ; i < start_states.size() ; i++)
@@ -403,8 +403,8 @@ vector< string > Parser::get_rules_lines(string rules_file_path)
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
 
-        return rules; 
-    }   
+        return rules;
+    }
     string rule;
     while (getline(file, rule)) {
         rules.push_back(rule);
@@ -631,7 +631,7 @@ vector< string > Parser::parse_rhs(string rhs_line)
                 if(((last_temp.compare("|") != 0 && last_temp.compare("-") != 0 && last_temp.compare("(") != 0) || temp.compare("") != 0)
 
                     && rhs_line[i + 1] != '|' && rhs_line[i + 1] != '-' && rhs_line[i + 1] != '+'
-                   
+
                     && rhs_line[i + 1] != '*' && rhs_line[i + 1] != ')')
                 {
                     parsed_tokens.push_back(".");
@@ -717,7 +717,7 @@ vector<string> Parser::infixtoPos(vector<string> infix)
     stack<string> stck;
     unordered_map<string, int> special_chars;
     special_chars["*"] = 5; special_chars["+"] = 4;
-    special_chars["."] = 3; special_chars["|"] = 2; 
+    special_chars["."] = 3; special_chars["|"] = 2;
     special_chars["("] = special_chars[")"] = 0;
     for(string token : infix)
     {
@@ -782,7 +782,7 @@ unordered_map<string, int> getPriority(vector< pair< string, vector<string> > > 
     for(int i = 0 ; i < exprs.size() ; i++)
     {
         priority[exprs[i].first] = i+1;
-    }    
+    }
     return priority;
 }
 
@@ -842,7 +842,7 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
                 expr_nfa.states[state_i].token = expr.first;
         }
         res.push(expr_nfa);
-    }    
+    }
 
     res.concatenateAllStack();
     return res;
@@ -1017,6 +1017,11 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
            (state1.transitions == state2.transitions);
        };
 
+    auto areEquivalentWithToken = [](const DFA_State& state1, const DFA_State& state2) {
+    return (state1.is_acceptance == state2.is_acceptance) &&
+           (state1.token == state2.token) &&
+           (state1.transitions == state2.transitions);
+};
     int id =0;
     std::vector<std::unordered_set<int>> equivalenceClassesNonAcceptance;
     std::vector<int> equivalenceClassNonIds;
@@ -1041,7 +1046,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
     for (int state : acceptance_states) {
         bool found = false;
         for (auto& equivalenceClass : equivalenceClassesAcceptance) {
-            if (areEquivalent(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
+            if (areEquivalentWithToken(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
                 equivalenceClass.insert(state);
                 found = true;
                 break;
@@ -1182,7 +1187,7 @@ int main()
     unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa, priority);
     unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
-    
+
     std::ofstream outFile("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/dfa_states_output.txt");
 
     // Check if the file is open
