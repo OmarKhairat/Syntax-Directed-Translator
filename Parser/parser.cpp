@@ -1001,7 +1001,7 @@ std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<i
 
 
 // Function to minimize a DFA
-std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states) {
+std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states, unordered_map<string, int> priority) {
     std::unordered_set<int> acceptance_states;
     std::unordered_set<int> non_acceptance_states;
     for (const auto& entry : dfa_states) {
@@ -1063,7 +1063,19 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         int id = equivalenceClassIds[i];
         DFA_State newState;
         newState.is_acceptance = true;
-        newState.token = dfa_states.at(*equivalenceClassesAcceptance[i].begin()).token; // Get token from the first state
+        // get most priority token
+        unordered_set<int> &equal_states = equivalenceClassesAcceptance[i] ;
+        string most_priority_token ;
+        for(auto state : equal_states){
+            if(most_priority_token.compare("") == 0){
+                most_priority_token = dfa_states.at(state).token;
+            }else{
+                if(priority[dfa_states.at(state).token] < priority[most_priority_token]){
+                    most_priority_token = dfa_states.at(state).token;
+                }
+            }
+        }
+        newState.token = most_priority_token;
          std::set<int> nfaStatesSet(equivalenceClassesAcceptance[i].begin(), equivalenceClassesAcceptance[i].end());
          newState.nfa_states = nfaStatesSet;
         minimizedDFA[id] = newState;
@@ -1227,7 +1239,7 @@ int main()
 
 
     std::cout << "DFA states written to dfa_states_output.txt" << std::endl;
-     unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states);
+     unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states, priority);
 
 
      std::size_t mapSize2 = minimzed_dfa_states.size();
