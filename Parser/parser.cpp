@@ -39,7 +39,7 @@ public:
     void kleeneStar();
     void positiveClosure();
     void processSymbol(string symbol);
-    void epsilonNFA_to_NFA();
+    void epsilonNFA_to_NFA(unordered_map<string, int> priority);
     void toJSON(string file_path);
     unordered_map< int, NFA_State > states;
     vector<int> start_states;
@@ -296,7 +296,7 @@ void NFA::processSymbol(string symbol)
     nfa_stack.push(new_nfa);
 }
 
-void NFA::epsilonNFA_to_NFA()
+void NFA::epsilonNFA_to_NFA(unordered_map<string, int> priority)
 {
     //get epsilon closure set map : state_id -> set of epsilon closure
     unordered_map<int, set<int>> epsilon_closure_set;
@@ -359,9 +359,14 @@ void NFA::epsilonNFA_to_NFA()
         // set acceptance states
         for(int ep_state_id : epsilon_closure_set[state_id]){
             if(states[ep_state_id].is_acceptance){
-                state_i.is_acceptance = true;
-                state_i.token = states[ep_state_id].token;
-                break;
+                if(state_i.is_acceptance){
+                    if(priority[state_i.token] > priority[states[ep_state_id].token]){
+                        state_i.token = states[ep_state_id].token;
+                    }
+                }else{
+                    state_i.is_acceptance = true;
+                    state_i.token = states[ep_state_id].token;
+                }
             }
         }
         states[state_id] = state_i;
@@ -816,8 +821,34 @@ vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pa
 NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
 {
     NFA res;
-    for(pair< string, vector<string> > expr : exprs)
+    unordered_map<string, int> priority;
+
+    for(string keyword : keywords)
     {
+        priority[keyword] = 0;
+        res.processSymbol(keyword);
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
+        {
+            expr_nfa.states[state_i].token = keyword;
+        }
+        res.push(expr_nfa);
+    }
+    for(string punctuation : punctuations)
+    {
+        priority[punctuation] = 0;
+        res.processSymbol(punctuation);
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
+        {
+            expr_nfa.states[state_i].token = punctuation;
+        }
+        res.push(expr_nfa);
+    }
+    for(int i = 0 ; i < exprs.size() ; i++)
+    {
+        pair< string, vector<string> > expr = exprs[i];
+        priority[expr.first] = i+1;
         for(string token : expr.second)
         {
             if(token.compare("*") == 0)
@@ -844,33 +875,14 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
         NFA expr_nfa = res.pop();
         for(int state_i : expr_nfa.end_states) // set token of acceptance states
         {
-            expr_nfa.states[state_i].token = expr.first;
+            if(expr_nfa.states[state_i].token.compare("") == 0)
+                expr_nfa.states[state_i].token = expr.first;
         }
         res.push(expr_nfa);
-    }
-    for(string keyword : keywords)
-    {
-        res.processSymbol(keyword);
-        NFA expr_nfa = res.pop();
-        for(int state_i : expr_nfa.end_states) // set token of acceptance states
-        {
-            expr_nfa.states[state_i].token = keyword;
-        }
-        res.push(expr_nfa);
-    }
-    for(string punctuation : punctuations)
-    {
-        res.processSymbol(punctuation);
-        NFA expr_nfa = res.pop();
-        for(int state_i : expr_nfa.end_states) // set token of acceptance states
-        {
-            expr_nfa.states[state_i].token = punctuation;
-        }
-        res.push(expr_nfa);
-    }
+    }    
 
     res.concatenateAllStack();
-    res.epsilonNFA_to_NFA();
+    res.epsilonNFA_to_NFA(priority);
 
     return res;
 }
