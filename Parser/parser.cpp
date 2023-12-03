@@ -15,7 +15,15 @@ struct NFA_State
     int id;
     bool is_acceptance;
     string token; // if is_acceptance is true
-    unordered_map< string, vector<int> > transitions;
+    unordered_map< string, set<int> > transitions;
+};
+
+struct DFA_State
+{
+    set<int> nfa_states;
+    bool is_acceptance;
+    string token;
+    unordered_map< string, set<int> > transitions;
 };
 
 class NFA {
@@ -27,10 +35,11 @@ public:
     void push(NFA nfa);
     void concatenate();
     void concatenateAllStack();
-    void or_op();
+    void orOp();
     void kleeneStar();
     void positiveClosure();
     void processSymbol(string symbol);
+    void epsilonNFA_to_NFA();
     void toJSON(string file_path);
     unordered_map< int, NFA_State > states;
     vector<int> start_states;
@@ -39,14 +48,6 @@ public:
 private:
     stack<NFA> nfa_stack;
     int stateCounter;
-};
-
-struct DFA_State
-{
-    set<int> nfa_states;
-    bool is_acceptance;
-    string token;
-    unordered_map<string, set<int>> transitions;
 };
 
 NFA::NFA()
@@ -69,8 +70,8 @@ void NFA::addState(int id, bool is_acceptance, bool is_start, string token)
 
 void NFA::addTransition(int from, string symbol, int to)
 {
-    vector<int> to_states = states[from].transitions[symbol];
-    to_states.push_back(to);
+    set<int> to_states = states[from].transitions[symbol];
+    to_states.insert(to);
     states[from].transitions[symbol] = to_states;
 }
 
@@ -152,7 +153,7 @@ void NFA::concatenateAllStack()
 
 }
 
-void NFA::or_op()
+void NFA::orOp()
 {
     // pop 2 NFAs
     NFA nfa2 = nfa_stack.top();
@@ -269,7 +270,7 @@ void NFA::processSymbol(string symbol)
     int new_start_state = stateCounter++;
     new_nfa.addState(new_start_state, false, true);
 
-    for(int i=0 ; i<symbol.length() ; i++)
+    for(unsigned int i=0 ; i<symbol.length() ; i++)
     {
         if(i>0 && symbol[i-1] == '\\')
         {
@@ -293,6 +294,78 @@ void NFA::processSymbol(string symbol)
     new_nfa.end_states.push_back(new_start_state);
 
     nfa_stack.push(new_nfa);
+}
+
+void NFA::epsilonNFA_to_NFA()
+{
+    //get epsilon closure set map : state_id -> set of epsilon closure
+    unordered_map<int, set<int>> epsilon_closure_set;
+    for(auto state : states){
+        int state_id = state.first;
+        set<int> epsilon_closure_i;
+        queue<int> q;
+        q.push(state_id);
+        while(!q.empty()){
+            int current_state = q.front();
+            q.pop();
+            epsilon_closure_i.insert(current_state);
+            for(int next_state : states[current_state].transitions["\\L"]){
+                if(epsilon_closure_i.find(next_state) == epsilon_closure_i.end()){
+                    if(epsilon_closure_set.find(next_state) != epsilon_closure_set.end()){
+                        epsilon_closure_i.insert(epsilon_closure_set[next_state].begin(), epsilon_closure_set[next_state].end());
+                    }else{
+                        q.push(next_state);
+                    }
+                }
+            }
+        }
+        epsilon_closure_set[state_id] = epsilon_closure_i;
+    }
+
+    // handle transitions
+    for(unsigned int state_id = 0; state_id < states.size() ; state_id++){
+        NFA_State &state_i = states[state_id];
+
+        // get combined transitions
+        unordered_map<string, set<int>> combined_transitions;
+        for(int state : epsilon_closure_set[state_id]){
+            // Get the transitions for the current state
+            const std::unordered_map<std::string, std::set<int>> &transitions = states[state].transitions;
+            // Iterate through each transition
+            for (const auto &transition : transitions){
+                const std::string &input_symbol = transition.first;
+                const std::set<int> &target_states = transition.second;
+                if(input_symbol.compare("\\L") != 0){
+                    combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+                }
+            }
+        }
+
+        for(auto &transition : combined_transitions){
+            set<int> &target_states = transition.second;
+
+            // covert each transition set to its epsilon closure
+            set<int> target_states_epsilon_closure;
+            for(int target_state : target_states){
+                target_states_epsilon_closure.insert(epsilon_closure_set[target_state].begin(), epsilon_closure_set[target_state].end());
+            }
+            combined_transitions[transition.first] = target_states_epsilon_closure;
+            target_states = target_states_epsilon_closure;
+
+        }
+        // add transitions to the state
+        state_i.transitions = combined_transitions;
+        
+        // set acceptance states
+        for(int ep_state_id : epsilon_closure_set[state_id]){
+            if(states[ep_state_id].is_acceptance){
+                state_i.is_acceptance = true;
+                state_i.token = states[ep_state_id].token;
+                break;
+            }
+        }
+        states[state_id] = state_i;
+    }
 }
 
 void NFA::toJSON(string file_path)
@@ -339,12 +412,14 @@ void NFA::toJSON(string file_path)
             file << "\t\t\t\t{" << endl;
             file << "\t\t\t\t\t\"symbol\": \"" << transition.first << "\"," << endl;
             file << "\t\t\t\t\t\"to\": [" << endl;
-            for(int k=0 ; k < transition.second.size() ; k++)
+            unsigned k = 0;
+            for(auto to_state : transition.second)
             {
-                file << "\t\t\t\t\t\t" << transition.second[k] ;
+                file << "\t\t\t\t\t\t" << to_state ;
                 if(k != transition.second.size() - 1)
                     file << "," ;
                 file << endl;
+                k++;
             }
             file << "\t\t\t\t\t]" << endl;
             file << "\t\t\t\t}" ;
@@ -755,7 +830,7 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
             }
             else if(token.compare("|") == 0)
             {
-                res.or_op();
+                res.orOp();
             }
             else if(token.compare(".") == 0)
             {
@@ -795,6 +870,8 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
     }
 
     res.concatenateAllStack();
+    res.epsilonNFA_to_NFA();
+
     return res;
 }
 
@@ -840,13 +917,13 @@ unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& 
     for (int state : current_state)
     {
         // Get the transitions for the current state
-        const std::unordered_map<std::string, std::vector<int>> &transitions = nfa_states.at(state).transitions;
+        const std::unordered_map<std::string, std::set<int>> &transitions = nfa_states.at(state).transitions;
 
         // Iterate through each transition
         for (const auto &transition : transitions)
         {
             const std::string &input_symbol = transition.first;
-            const std::vector<int> &target_states = transition.second;
+            const std::set<int> &target_states = transition.second;
 
             combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
         }
@@ -1077,7 +1154,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
 int main()
 {
     Parser p;
-    vector<string> rules = p.get_rules_lines("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/lexical_rules.txt");
+    vector<string> rules = p.get_rules_lines("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
@@ -1099,8 +1176,7 @@ int main()
     // }
 
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
-
-    exprs_nfa.toJSON("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/NFA.json");
+    exprs_nfa.toJSON("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
     unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
