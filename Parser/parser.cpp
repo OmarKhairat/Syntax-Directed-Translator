@@ -39,6 +39,7 @@ public:
     void kleeneStar();
     void positiveClosure();
     void processSymbol(string symbol);
+    unordered_map< int, set<int> > getEpsilonClosureSetMap();
     void epsilonNFA_to_NFA(unordered_map<string, int> priority);
     void toJSON(string file_path);
     unordered_map< int, NFA_State > states;
@@ -296,9 +297,8 @@ void NFA::processSymbol(string symbol)
     nfa_stack.push(new_nfa);
 }
 
-void NFA::epsilonNFA_to_NFA(unordered_map<string, int> priority)
+unordered_map< int, set<int> > NFA::getEpsilonClosureSetMap()
 {
-    //get epsilon closure set map : state_id -> set of epsilon closure
     unordered_map<int, set<int>> epsilon_closure_set;
     for(auto state : states){
         int state_id = state.first;
@@ -321,6 +321,12 @@ void NFA::epsilonNFA_to_NFA(unordered_map<string, int> priority)
         }
         epsilon_closure_set[state_id] = epsilon_closure_i;
     }
+    return epsilon_closure_set;
+}
+
+void NFA::epsilonNFA_to_NFA(unordered_map<string, int> priority)
+{
+    unordered_map<int, set<int>> epsilon_closure_set = getEpsilonClosureSetMap();
 
     // handle transitions
     for(unsigned int state_id = 0; state_id < states.size() ; state_id++){
@@ -888,25 +894,27 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
 }
 
 
-unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& nfa_states,
-                                           const vector<int>& nfa_start_states,
-                                           const vector<int>& nfa_end_states)
+unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> priority)
 {
+    unordered_map<int, set<int>> epsilon_closure_set_map = nfa.getEpsilonClosureSetMap() ;
     unordered_map<int, DFA_State> dfa_states;
     queue<set<int>> unmarked_states;
     set<int> start_state_closure;
-    for (int start_state : nfa_start_states)
+    for (int start_state : nfa.start_states)
     {
-        start_state_closure.insert(start_state);
+        // insert epsilon closure of start state
+        start_state_closure.insert(epsilon_closure_set_map[start_state].begin(), epsilon_closure_set_map[start_state].end());
     }
 
      std::cout << "nfa_end_states: ";
-    for (const int& state : nfa_end_states) {
+    for (const int& state : nfa.end_states) {
         std::cout << state << " ";
     }
     std::cout << std::endl;
+    // TODO: push ep_closure(start_state) to the queue
     unmarked_states.push(start_state_closure);
     int dfa_state_id = 0;
+
 
     while(!unmarked_states.empty())
     {
@@ -914,55 +922,78 @@ unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& 
         dfa_state.nfa_states = unmarked_states.front();
         unmarked_states.pop();
         dfa_state.is_acceptance = false;
-        set<int> current_state =dfa_state.nfa_states;
-        for (int nfa_state : current_state)
+        set<int> current_states =dfa_state.nfa_states;
+
+        // Check if the current state contains an NFA acceptance state
+        for (int nfa_state : current_states)
         {
-            if (find(nfa_end_states.begin(), nfa_end_states.end(), nfa_state) != nfa_end_states.end())
+            if (find(nfa.end_states.begin(), nfa.end_states.end(), nfa_state) != nfa.end_states.end())
             {
-                dfa_state.is_acceptance = true;
-                dfa_state.token = nfa_states.at(nfa_state).token;
-                break;
+                if(dfa_state.is_acceptance == true){
+                    if(priority[dfa_state.token] > priority[nfa.states.at(nfa_state).token]){
+                        dfa_state.token = nfa.states.at(nfa_state).token;
+                    }
+                }else{
+                    dfa_state.is_acceptance = true;
+                    dfa_state.token = nfa.states.at(nfa_state).token;
+                }
             }
         }
 
-         std::unordered_map<std::string, std::set<int>> combined_transitions;
-    for (int state : current_state)
-    {
-        // Get the transitions for the current state
-        const std::unordered_map<std::string, std::set<int>> &transitions = nfa_states.at(state).transitions;
-
-        // Iterate through each transition
-        for (const auto &transition : transitions)
+        std::unordered_map<std::string, std::set<int>> combined_transitions;
+        for (int state : current_states)
         {
-            const std::string &input_symbol = transition.first;
-            const std::set<int> &target_states = transition.second;
+            // Get the transitions for the current state
+            const std::unordered_map<std::string, std::set<int>> &transitions = nfa.states.at(state).transitions;
 
-            combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+            // Iterate through each transition
+            for (const auto &transition : transitions)
+            {
+                const std::string &input_symbol = transition.first;
+                const std::set<int> &target_states = transition.second;
+                if(input_symbol != "\\L"){
+                    combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+                }
+            }
         }
-    }
+
+        // covert each transition set to its epsilon closure
+        for(auto &transition : combined_transitions)
+        {
+            set<int> &target_states = transition.second;
+
+            // covert each transition set to its epsilon closure
+            set<int> target_states_epsilon_closure;
+            for(int target_state : target_states){
+                target_states_epsilon_closure.insert(epsilon_closure_set_map[target_state].begin(), epsilon_closure_set_map[target_state].end());
+            }
+            combined_transitions[transition.first] = target_states_epsilon_closure;
+            target_states = target_states_epsilon_closure;
+        }
+
         dfa_state.transitions = combined_transitions;
         dfa_states[dfa_state_id] = dfa_state;
-          for (const auto& entry : combined_transitions) {
-        const std::set<int>& target_states = entry.second;
-        bool isNotInQueue = true;
-        for (std::queue<std::set<int>> tempQueue = unmarked_states; !tempQueue.empty(); tempQueue.pop()) {
-            if (tempQueue.front() == target_states) {
-                isNotInQueue = false;
-                break;
+        for (const auto& entry : combined_transitions) {
+            const std::set<int>& target_states = entry.second;
+            bool isNotInQueue = true;
+            for (std::queue<std::set<int>> tempQueue = unmarked_states; !tempQueue.empty(); tempQueue.pop()) {
+                if (tempQueue.front() == target_states) {
+                    isNotInQueue = false;
+                    break;
+                }
+            }
+
+            for (const auto& dfaEntry : dfa_states) {
+            const DFA_State& existingDFAState = dfaEntry.second;
+                if (existingDFAState.nfa_states == target_states) {
+                    isNotInQueue = false;
+                    break;
+                }
+            }
+            if (isNotInQueue) {
+                unmarked_states.push(target_states);
             }
         }
-
-          for (const auto& dfaEntry : dfa_states) {
-        const DFA_State& existingDFAState = dfaEntry.second;
-        if (existingDFAState.nfa_states == target_states) {
-            isNotInQueue = false;
-            break;
-        }
-    }
-        if (isNotInQueue) {
-            unmarked_states.push(target_states);
-        }
-    }
         dfa_state_id++;
     }
     return dfa_states;
