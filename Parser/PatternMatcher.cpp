@@ -104,7 +104,7 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
         transitions = currentState.transitions;
 
         // Check if current character is valid.
-        next = getNextTransition(transitions, c);
+        next = getNextTransition(transitions, s);
 
         if (next != -1) {
             currentState = dfa[next];
