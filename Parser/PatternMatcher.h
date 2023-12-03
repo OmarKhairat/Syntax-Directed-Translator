@@ -17,13 +17,13 @@ public:
 //    set<string> getTokens();
 //    void setTokens(set<string> newTokens);
 
-    vector<string> matchExpression(string expression);
+    unordered_map<string, string> matchExpression(string expression);
 
 private:
     unordered_map<int, DFA_State> dfa;
 //    set<string> tokens;
 
-    int getNextTransition(unordered_map<string, set<int>> transitions, char c);
+    int getNextTransition(unordered_map<string, set<int>> transitions, string s);
 };
 
 

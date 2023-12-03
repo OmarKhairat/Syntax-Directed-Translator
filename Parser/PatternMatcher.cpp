@@ -58,34 +58,46 @@ void PatternMatcher::setDfa(unordered_map<int, DFA_State> minimizedDfa) {
  * vector<string> matchedPatterns = PatternMatcher::matchExpression('xyz');
  * @endcode
  */
-vector<string> PatternMatcher::matchExpression(string expression) {
-    vector<string> matchedPatterns;
-    string maliciousPattern;
+unordered_map<string, string> PatternMatcher::matchExpression(string expression) {
+    unordered_map<string, string> symbolTable;
+    string pattern;
 
     DFA_State currentState = dfa[0]; // Starting state
     DFA_State acceptor{};
 
     int next;
+    int counter = 0; // Keeps track of how many characters after last accepted pattern
     bool acceptorIsPresent = false;
 
     unordered_map<string, set<int>> transitions; // Maintains current state transitions
 
     for (int i = 0; i < expression.size(); i++) {
-        char c = expression[i];
-        maliciousPattern += c;
+        string s = string(1, expression[i]);
+        pattern += s;
+        counter++;
+
+        if (s == "\\") {
+            // Check next char
+            if (i + 1 < expression.size()) {
+                s += expression[i + 1];
+            }
+            i++;
+        }
 
         if (currentState.is_acceptance) {
-            // If there isn't any acceptor already, simply assign current to be acceptor.
+            // If there isn't any acceptor already, simply assign the current state to be the acceptor.
             if (!acceptorIsPresent) {
                 acceptor = currentState;
+                counter = 0;
                 acceptorIsPresent = true;
             }
 
             // However, If the program encountered an acceptance state and
             // its token's priority is higher than current acceptor's priority,
             // Set the last acceptor to current state.
-            if (currentState.priority > lastAcceptor.priority) {
+            if (currentState.priority > acceptor.priority) {
                 acceptor = currentState;
+                counter = 0;
             }
         }
 
@@ -99,28 +111,27 @@ vector<string> PatternMatcher::matchExpression(string expression) {
         } else {
             // An error has occurred. Remove the last acceptor's token from the pattern.
             if (acceptorIsPresent) {
-                // If an acceptor is present, add its token to matched patterns and
-                // remove it from the malicious pattern then start all over.
-                matchedPatterns.push_back(acceptor.token);
+                // If an acceptor is present, add the matched pattern and start all over.
                 int idx = acceptor.token.size();
-                maliciousPattern = maliciousPattern.substr(idx);
+                symbolTable.insert(make_pair(acceptor.token, pattern.substr(0, idx)));
 
                 // Decrement the counter i to start new pattern matching process.
-                i -= maliciousPattern.size();
+                i -= counter;
+                counter = 0;
             } else {
                 // If no acceptor is available, then the pattern is reported to give an error.
-                matchedPatterns.push_back(maliciousPattern);
-                maliciousPattern = "";
+                symbolTable.insert(make_pair("error", pattern));
             }
+            pattern = "";
         }
     }
 
-    return matchedPatterns;
+    return symbolTable;
 }
 
-int PatternMatcher::getNextTransition(unordered_map<std::string, set<int>> transitions, char c) {
+int PatternMatcher::getNextTransition(unordered_map<std::string, set<int>> transitions, string s) {
     for (const auto& transition : transitions) {
-        if (transition.first == string(1, c)) {
+        if (transition.first == s) {
             return *transition.second.begin();
         }
     }
