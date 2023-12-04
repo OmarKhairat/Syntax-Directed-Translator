@@ -15,7 +15,15 @@ struct NFA_State
     int id;
     bool is_acceptance;
     string token; // if is_acceptance is true
-    unordered_map< string, vector<int> > transitions;
+    unordered_map< string, set<int> > transitions;
+};
+
+struct DFA_State
+{
+    set<int> nfa_states;
+    bool is_acceptance;
+    string token;
+    unordered_map< string, set<int> > transitions;
 };
 
 class NFA {
@@ -27,10 +35,11 @@ public:
     void push(NFA nfa);
     void concatenate();
     void concatenateAllStack();
-    void or_op();
+    void orOp();
     void kleeneStar();
     void positiveClosure();
     void processSymbol(string symbol);
+    unordered_map< int, set<int> > getEpsilonClosureSetMap();
     void toJSON(string file_path);
     unordered_map< int, NFA_State > states;
     vector<int> start_states;
@@ -39,14 +48,6 @@ public:
 private:
     stack<NFA> nfa_stack;
     int stateCounter;
-};
-
-struct DFA_State
-{
-    set<int> nfa_states;
-    bool is_acceptance;
-    string token;
-    unordered_map<string, set<int>> transitions;
 };
 
 NFA::NFA()
@@ -69,8 +70,8 @@ void NFA::addState(int id, bool is_acceptance, bool is_start, string token)
 
 void NFA::addTransition(int from, string symbol, int to)
 {
-    vector<int> to_states = states[from].transitions[symbol];
-    to_states.push_back(to);
+    set<int> to_states = states[from].transitions[symbol];
+    to_states.insert(to);
     states[from].transitions[symbol] = to_states;
 }
 
@@ -152,7 +153,7 @@ void NFA::concatenateAllStack()
 
 }
 
-void NFA::or_op()
+void NFA::orOp()
 {
     // pop 2 NFAs
     NFA nfa2 = nfa_stack.top();
@@ -269,7 +270,7 @@ void NFA::processSymbol(string symbol)
     int new_start_state = stateCounter++;
     new_nfa.addState(new_start_state, false, true);
 
-    for(int i=0 ; i<symbol.length() ; i++)
+    for(unsigned int i=0 ; i<symbol.length() ; i++)
     {
         if(i>0 && symbol[i-1] == '\\')
         {
@@ -295,14 +296,41 @@ void NFA::processSymbol(string symbol)
     nfa_stack.push(new_nfa);
 }
 
+unordered_map< int, set<int> > NFA::getEpsilonClosureSetMap()
+{
+    unordered_map<int, set<int>> epsilon_closure_set;
+    for(auto state : states){
+        int state_id = state.first;
+        set<int> epsilon_closure_i;
+        queue<int> q;
+        q.push(state_id);
+        while(!q.empty()){
+            int current_state = q.front();
+            q.pop();
+            epsilon_closure_i.insert(current_state);
+            for(int next_state : states[current_state].transitions["\\L"]){
+                if(epsilon_closure_i.find(next_state) == epsilon_closure_i.end()){
+                    if(epsilon_closure_set.find(next_state) != epsilon_closure_set.end()){
+                        epsilon_closure_i.insert(epsilon_closure_set[next_state].begin(), epsilon_closure_set[next_state].end());
+                    }else{
+                        q.push(next_state);
+                    }
+                }
+            }
+        }
+        epsilon_closure_set[state_id] = epsilon_closure_i;
+    }
+    return epsilon_closure_set;
+}
+
 void NFA::toJSON(string file_path)
 {
     ofstream file(file_path);
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
 
-        return; 
-    }   
+        return;
+    }
     file << "{" << endl;
     file << "\t\"start_states\": [" << endl;
     for(int i = 0 ; i < start_states.size() ; i++)
@@ -339,12 +367,14 @@ void NFA::toJSON(string file_path)
             file << "\t\t\t\t{" << endl;
             file << "\t\t\t\t\t\"symbol\": \"" << transition.first << "\"," << endl;
             file << "\t\t\t\t\t\"to\": [" << endl;
-            for(int k=0 ; k < transition.second.size() ; k++)
+            unsigned k = 0;
+            for(auto to_state : transition.second)
             {
-                file << "\t\t\t\t\t\t" << transition.second[k] ;
+                file << "\t\t\t\t\t\t" << to_state ;
                 if(k != transition.second.size() - 1)
                     file << "," ;
                 file << endl;
+                k++;
             }
             file << "\t\t\t\t\t]" << endl;
             file << "\t\t\t\t}" ;
@@ -373,8 +403,8 @@ vector< string > Parser::get_rules_lines(string rules_file_path)
     if (!file.is_open()) {
         cerr << "Error: Unable to open the file." << endl;
 
-        return rules; 
-    }   
+        return rules;
+    }
     string rule;
     while (getline(file, rule)) {
         rules.push_back(rule);
@@ -601,7 +631,7 @@ vector< string > Parser::parse_rhs(string rhs_line)
                 if(((last_temp.compare("|") != 0 && last_temp.compare("-") != 0 && last_temp.compare("(") != 0) || temp.compare("") != 0)
 
                     && rhs_line[i + 1] != '|' && rhs_line[i + 1] != '-' && rhs_line[i + 1] != '+'
-                   
+
                     && rhs_line[i + 1] != '*' && rhs_line[i + 1] != ')')
                 {
                     parsed_tokens.push_back(".");
@@ -687,7 +717,7 @@ vector<string> Parser::infixtoPos(vector<string> infix)
     stack<string> stck;
     unordered_map<string, int> special_chars;
     special_chars["*"] = 5; special_chars["+"] = 4;
-    special_chars["."] = 3; special_chars["|"] = 2; 
+    special_chars["."] = 3; special_chars["|"] = 2;
     special_chars["("] = special_chars[")"] = 0;
     for(string token : infix)
     {
@@ -737,42 +767,28 @@ vector< pair< string, vector<string> > > Parser::convert_exprs_to_pos(vector< pa
     return res;
 }
 
+unordered_map<string, int> getPriority(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
+{
+    unordered_map<string, int> priority;
 
-NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations)
+    for(string keyword : keywords)
+    {
+        priority[keyword] = 0;
+    }
+    for(string punctuation : punctuations)
+    {
+        priority[punctuation] = 0;
+    }
+    for(int i = 0 ; i < exprs.size() ; i++)
+    {
+        priority[exprs[i].first] = i+1;
+    }
+    return priority;
+}
+
+NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs, vector<string> keywords, vector<string> punctuations, unordered_map<string, int> priority)
 {
     NFA res;
-    for(pair< string, vector<string> > expr : exprs)
-    {
-        for(string token : expr.second)
-        {
-            if(token.compare("*") == 0)
-            {
-                res.kleeneStar();
-            }
-            else if(token.compare("+") == 0)
-            {
-                res.positiveClosure();
-            }
-            else if(token.compare("|") == 0)
-            {
-                res.or_op();
-            }
-            else if(token.compare(".") == 0)
-            {
-                res.concatenate();
-            }
-            else
-            {
-                res.processSymbol(token);
-            }
-        }
-        NFA expr_nfa = res.pop();
-        for(int state_i : expr_nfa.end_states) // set token of acceptance states
-        {
-            expr_nfa.states[state_i].token = expr.first;
-        }
-        res.push(expr_nfa);
-    }
     for(string keyword : keywords)
     {
         res.processSymbol(keyword);
@@ -793,87 +809,168 @@ NFA convert_exprs_postfix_to_NFA(vector< pair< string, vector<string> > > exprs,
         }
         res.push(expr_nfa);
     }
+    for(int i = 0 ; i < exprs.size() ; i++)
+    {
+        pair< string, vector<string> > expr = exprs[i];
+        for(string token : expr.second)
+        {
+            if(token.compare("*") == 0)
+            {
+                res.kleeneStar();
+            }
+            else if(token.compare("+") == 0)
+            {
+                res.positiveClosure();
+            }
+            else if(token.compare("|") == 0)
+            {
+                res.orOp();
+            }
+            else if(token.compare(".") == 0)
+            {
+                res.concatenate();
+            }
+            else
+            {
+                res.processSymbol(token);
+            }
+        }
+        NFA expr_nfa = res.pop();
+        for(int state_i : expr_nfa.end_states) // set token of acceptance states
+        {
+            if(expr_nfa.states[state_i].token.compare("") == 0)
+                expr_nfa.states[state_i].token = expr.first;
+        }
+        res.push(expr_nfa);
+    }
 
     res.concatenateAllStack();
     return res;
 }
 
 
-unordered_map<int, DFA_State> constructDFA(const unordered_map<int, NFA_State>& nfa_states,
-                                           const vector<int>& nfa_start_states,
-                                           const vector<int>& nfa_end_states)
+unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> priority)
 {
+    unordered_map<int, set<int>> epsilon_closure_set_map = nfa.getEpsilonClosureSetMap() ;
     unordered_map<int, DFA_State> dfa_states;
     queue<set<int>> unmarked_states;
     set<int> start_state_closure;
-    for (int start_state : nfa_start_states)
+
+    for (int start_state : nfa.start_states)
     {
-        start_state_closure.insert(start_state);
+        // insert epsilon closure of start state
+        start_state_closure.insert(epsilon_closure_set_map[start_state].begin(), epsilon_closure_set_map[start_state].end());
     }
 
+
      std::cout << "nfa_end_states: ";
-    for (const int& state : nfa_end_states) {
+    for (const int& state : nfa.end_states) {
         std::cout << state << " ";
     }
     std::cout << std::endl;
+    // TODO: push ep_closure(start_state) to the queue
     unmarked_states.push(start_state_closure);
     int dfa_state_id = 0;
-
+     set<string> input_symbols;
+    for (const auto &state : nfa.states)
+    {
+        for (const auto &transition : state.second.transitions)
+        {
+            if (transition.first != "\\L")
+            {
+                input_symbols.insert(transition.first);
+            }
+        }
+    }
+    int DEAD_STATE_ID = -2;
+    DFA_State dead_state;
+    dead_state.is_acceptance = false;
+    dfa_states[DEAD_STATE_ID] = dead_state;
     while(!unmarked_states.empty())
     {
         DFA_State dfa_state;
         dfa_state.nfa_states = unmarked_states.front();
         unmarked_states.pop();
         dfa_state.is_acceptance = false;
-        set<int> current_state =dfa_state.nfa_states;
-        for (int nfa_state : current_state)
+        set<int> current_states =dfa_state.nfa_states;
+
+        // Check if the current state contains an NFA acceptance state
+        for (int nfa_state : current_states)
         {
-            if (find(nfa_end_states.begin(), nfa_end_states.end(), nfa_state) != nfa_end_states.end())
+            if (find(nfa.end_states.begin(), nfa.end_states.end(), nfa_state) != nfa.end_states.end())
             {
-                dfa_state.is_acceptance = true;
-                dfa_state.token = nfa_states.at(nfa_state).token;
-                break;
+                if(dfa_state.is_acceptance == true){
+                    if(priority[dfa_state.token] > priority[nfa.states.at(nfa_state).token]){
+                        dfa_state.token = nfa.states.at(nfa_state).token;
+                    }
+                }else{
+                    dfa_state.is_acceptance = true;
+                    dfa_state.token = nfa.states.at(nfa_state).token;
+                }
             }
         }
 
-         std::unordered_map<std::string, std::set<int>> combined_transitions;
-    for (int state : current_state)
-    {
-        // Get the transitions for the current state
-        const std::unordered_map<std::string, std::vector<int>> &transitions = nfa_states.at(state).transitions;
-
-        // Iterate through each transition
-        for (const auto &transition : transitions)
+        std::unordered_map<std::string, std::set<int>> combined_transitions;
+        for (int state : current_states)
         {
-            const std::string &input_symbol = transition.first;
-            const std::vector<int> &target_states = transition.second;
+            // Get the transitions for the current state
+            const std::unordered_map<std::string, std::set<int>> &transitions = nfa.states.at(state).transitions;
 
-            combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+            // Iterate through each transition
+            for (const auto &transition : transitions)
+            {
+                const std::string &input_symbol = transition.first;
+                const std::set<int> &target_states = transition.second;
+                if(input_symbol != "\\L"){
+                    combined_transitions[input_symbol].insert(target_states.begin(), target_states.end());
+                }
+            }
         }
-    }
+
+
+          for (const auto &symbol : input_symbols)
+        {
+            if (combined_transitions.find(symbol) == combined_transitions.end())
+            {
+                combined_transitions[symbol].insert(DEAD_STATE_ID);
+            }
+        }
+        // covert each transition set to its epsilon closure
+        for(auto &transition : combined_transitions)
+        {
+            set<int> &target_states = transition.second;
+
+            // covert each transition set to its epsilon closure
+            set<int> target_states_epsilon_closure;
+            for(int target_state : target_states){
+                target_states_epsilon_closure.insert(epsilon_closure_set_map[target_state].begin(), epsilon_closure_set_map[target_state].end());
+            }
+            combined_transitions[transition.first] = target_states_epsilon_closure;
+            target_states = target_states_epsilon_closure;
+        }
         dfa_state.transitions = combined_transitions;
         dfa_states[dfa_state_id] = dfa_state;
-          for (const auto& entry : combined_transitions) {
-        const std::set<int>& target_states = entry.second;
-        bool isNotInQueue = true;
-        for (std::queue<std::set<int>> tempQueue = unmarked_states; !tempQueue.empty(); tempQueue.pop()) {
-            if (tempQueue.front() == target_states) {
-                isNotInQueue = false;
-                break;
+        for (const auto& entry : combined_transitions) {
+            const std::set<int>& target_states = entry.second;
+            bool isNotInQueue = true;
+            for (std::queue<std::set<int>> tempQueue = unmarked_states; !tempQueue.empty(); tempQueue.pop()) {
+                if (tempQueue.front() == target_states) {
+                    isNotInQueue = false;
+                    break;
+                }
+            }
+
+            for (const auto& dfaEntry : dfa_states) {
+            const DFA_State& existingDFAState = dfaEntry.second;
+                if (existingDFAState.nfa_states == target_states) {
+                    isNotInQueue = false;
+                    break;
+                }
+            }
+            if (isNotInQueue) {
+                unmarked_states.push(target_states);
             }
         }
-
-          for (const auto& dfaEntry : dfa_states) {
-        const DFA_State& existingDFAState = dfaEntry.second;
-        if (existingDFAState.nfa_states == target_states) {
-            isNotInQueue = false;
-            break;
-        }
-    }
-        if (isNotInQueue) {
-            unmarked_states.push(target_states);
-        }
-    }
         dfa_state_id++;
     }
     return dfa_states;
@@ -896,14 +993,20 @@ std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<i
     for (const auto& dfa_entry : dfa_states) {
         const DFA_State& dfa_state = dfa_entry.second;
         DFA_State updated_dfa_state = dfa_state;  // Make a copy
-
         for (auto& transition_entry : updated_dfa_state.transitions) {
             const std::string& transition_key = transition_entry.first;
             std::set<int>& nfa_states = transition_entry.second;
-
             // Create a new set to store the updated IDs
             std::set<int> updated_nfa_states;
-
+              for (const auto& entry : dfa_states) {
+        const std::set<int>& nfaStatesSet = entry.second.nfa_states;
+        if (nfaStatesSet == nfa_states) {
+             int dfa_state_id = entry.first;
+              updated_nfa_states.insert(dfa_state_id);
+              transition_entry.second = updated_nfa_states;
+            break;
+        }
+        /*
             // Iterate over the original set and replace with corresponding IDs
             for (int nfa_state : nfa_states) {
                 // Use the function to get the ID from the set of DFA states
@@ -912,36 +1015,59 @@ std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<i
                 // Add the ID to the updated set
                 updated_nfa_states.insert(dfa_state_id);
             }
-
+            */
             // Update the transitions with the new set of IDs
-            transition_entry.second = updated_nfa_states;
         }
 
         // Add the updated DFA state to the result map
-        updated_dfa_states[dfa_entry.first] = updated_dfa_state;
-    }
 
+    }
+     updated_dfa_states[dfa_entry.first] = updated_dfa_state;
+    }
     return updated_dfa_states;
 }
 
 
 // Function to minimize a DFA
-std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states) {
-    std::unordered_set<int> acceptance_states;
-    std::unordered_set<int> non_acceptance_states;
-    for (const auto& entry : dfa_states) {
+std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states, unordered_map<string, int> priority) {
+   std::unordered_set<int> acceptance_states;
+std::unordered_set<int> non_acceptance_states;
+  std::unordered_map<int, DFA_State> minimizedDFA;
+for (const auto& entry : dfa_states) {
+    if (entry.first != -2) {
         if (entry.second.is_acceptance) {
             acceptance_states.insert(entry.first);
         } else {
             non_acceptance_states.insert(entry.first);
         }
     }
+}
+
+ int DEAD_STATE_ID = -2;
+    DFA_State dead_state;
+    dead_state.is_acceptance = false;
+    dead_state.nfa_states = { -2 };
+     std::set<std::string> input_symbols;
+    for (const auto& entry : dfa_states) {
+        for (const auto& transition : entry.second.transitions) {
+            if (transition.first != "\\L") {
+                input_symbols.insert(transition.first);
+            }
+        }
+    }
+     minimizedDFA[DEAD_STATE_ID] = dead_state;
+
     // Helper function to check if two states are equivalent
     auto areEquivalent = [](const DFA_State& state1, const DFA_State& state2) {
     return (state1.is_acceptance == state2.is_acceptance) &&
            (state1.transitions == state2.transitions);
        };
 
+    auto areEquivalentWithToken = [](const DFA_State& state1, const DFA_State& state2) {
+    return (state1.is_acceptance == state2.is_acceptance) &&
+           (state1.token == state2.token) &&
+           (state1.transitions == state2.transitions);
+};
     int id =0;
     std::vector<std::unordered_set<int>> equivalenceClassesNonAcceptance;
     std::vector<int> equivalenceClassNonIds;
@@ -966,7 +1092,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
     for (int state : acceptance_states) {
         bool found = false;
         for (auto& equivalenceClass : equivalenceClassesAcceptance) {
-            if (areEquivalent(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
+            if (areEquivalentWithToken(dfa_states.at(*equivalenceClass.begin()), dfa_states.at(state))) {
                 equivalenceClass.insert(state);
                 found = true;
                 break;
@@ -978,12 +1104,24 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         }
     }
 
-    std::unordered_map<int, DFA_State> minimizedDFA;
+
     for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
         int id = equivalenceClassIds[i];
         DFA_State newState;
         newState.is_acceptance = true;
-        newState.token = dfa_states.at(*equivalenceClassesAcceptance[i].begin()).token; // Get token from the first state
+        // get most priority token
+        unordered_set<int> &equal_states = equivalenceClassesAcceptance[i] ;
+        string most_priority_token ;
+        for(auto state : equal_states){
+            if(most_priority_token.compare("") == 0){
+                most_priority_token = dfa_states.at(state).token;
+            }else{
+                if(priority[dfa_states.at(state).token] < priority[most_priority_token]){
+                    most_priority_token = dfa_states.at(state).token;
+                }
+            }
+        }
+        newState.token = most_priority_token;
          std::set<int> nfaStatesSet(equivalenceClassesAcceptance[i].begin(), equivalenceClassesAcceptance[i].end());
          newState.nfa_states = nfaStatesSet;
         minimizedDFA[id] = newState;
@@ -1001,7 +1139,12 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
-            int targetStateId = -1;
+             if (input_symbols.find(input) == input_symbols.end()) {
+                minimizedDFA[id].transitions[input].insert(DEAD_STATE_ID);
+            }
+            else
+            {
+                            int targetStateId = -1;
             for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
                 auto& currentSet = equivalenceClassesAcceptance[j];
                 for (const auto& entry : dfa_states) {
@@ -1030,6 +1173,8 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
             }
         }
         minimizedDFA[id].transitions[input].insert(targetStateId);
+            }
+
         }
     }
 
@@ -1038,7 +1183,12 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesNonAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
-            int targetStateId = -1; // Default value if not found
+             if (input_symbols.find(input) == input_symbols.end()) {
+                minimizedDFA[id].transitions[input].insert(DEAD_STATE_ID);
+            }
+            else
+            {
+                  int targetStateId = -1; // Default value if not found
             // Search for the target state in equivalenceClassesNonAcceptance
            for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
                 auto& currentSet = equivalenceClassesNonAcceptance[j];
@@ -1068,6 +1218,8 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
                 }
             }
             minimizedDFA[id].transitions[input].insert(targetStateId);
+            }
+
         }
     }
 
@@ -1077,7 +1229,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
 int main()
 {
     Parser p;
-    vector<string> rules = p.get_rules_lines("/Users/omarkhairat/Documents/GitHub/Syntax-Directed-Translator/lexical_rules.txt");
+    vector<string> rules = p.get_rules_lines("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
@@ -1098,16 +1250,17 @@ int main()
     //     cout << endl;
     // }
 
-    NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations);
+    unordered_map<string, int> priority = getPriority(exprs, keywords, punctuations);
 
+    NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations, priority);
     exprs_nfa.toJSON("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
-    unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa.states, exprs_nfa.start_states, exprs_nfa.end_states);
+    unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa, priority);
     unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
-    /*
-    std::ofstream outFile("dfa_states_output.txt");
+
+    std::ofstream outFile("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/Parser/dfa_states_output.txt");
 
     // Check if the file is open
     if (!outFile.is_open()) {
@@ -1143,13 +1296,15 @@ int main()
 
     // Close the file
     outFile.close();
-*/
+
+
     std::cout << "DFA states written to dfa_states_output.txt" << std::endl;
-     unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states);
-     /*
+     unordered_map<int, DFA_State> minimzed_dfa_states =  minimizeDFA(dfa_states, priority);
+
+
      std::size_t mapSize2 = minimzed_dfa_states.size();
     std::cout << "Size of the unordered_map: " << mapSize2 << std::endl;
-    std::ofstream outFile2("dfa_states_output2.txt");
+    std::ofstream outFile2("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/Parser/dfa_states_output2.txt");
 
     // Check if the file is open
     if (!outFile2.is_open()) {
@@ -1188,7 +1343,7 @@ int main()
 
     // Close the file
     outFile2.close();
-*/
+
 
     return 0;
 }
