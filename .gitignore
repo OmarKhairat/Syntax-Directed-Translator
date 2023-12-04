@@ -43,3 +43,4 @@ output/minn.dSYM/Contents/Resources/DWARF/minn
 Parser/output/parser
 Parser/output/parser.dSYM/Contents/Resources/DWARF/parser
 LexicalAnalyzer/output/lexicalAnalyzer
+NFA.json
