@@ -1104,12 +1104,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
     }
 
     minimizedDFA[DEAD_STATE_ID] = dead_state;
-    std::cout << "Input symbols: { ";
-    for (const auto &symbol : input_symbols)
-    {
-        std::cout << symbol << " ";
-    }
-    std::cout << "}" << std::endl;
+
     // Helper function to check if two states are equivalent
     auto areEquivalent = [](const DFA_State &state1, const DFA_State &state2)
     {
@@ -1266,12 +1261,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         {
             std::string input = transition.first;
             std::set<int> mySet = transition.second;
-            std::cout << "Set elements: { ";
-            for (const auto &element : mySet)
-            {
-                std::cout << element << " ";
-            }
-            std::cout << "}" << std::endl;
+
             if (mySet.size() == 0)
             {
                 minimizedDFA[id].transitions[input].insert(DEAD_STATE_ID);
@@ -1295,7 +1285,6 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
                     }
 
                     auto setIterator = currentSet.find(reusult);
-                    std::cout << reusult << std::endl;
                     if (setIterator != currentSet.end())
                     {
                         int index = findIndex(equivalenceClassesNonAcceptance, currentSet);
