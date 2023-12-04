@@ -1,11 +1,13 @@
 #include "PatternMatcher.h"
 
+#include <utility>
+
 /**
  * All commented code is left over for further assumptions.
  * */
 
 PatternMatcher::PatternMatcher(unordered_map<int, DFA_State> minimizedDfa) {
-    PatternMatcher::dfa = minimizedDfa;
+    PatternMatcher::dfa = std::move(minimizedDfa);
 }
 
 unordered_map<int, DFA_State> PatternMatcher::getDfa() {
@@ -13,7 +15,7 @@ unordered_map<int, DFA_State> PatternMatcher::getDfa() {
 }
 
 void PatternMatcher::setDfa(unordered_map<int, DFA_State> minimizedDfa) {
-    PatternMatcher::dfa = minimizedDfa;
+    PatternMatcher::dfa = std::move(minimizedDfa);
 }
 
 /**
@@ -88,7 +90,7 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
             // An error has occurred. Remove the last acceptor's token from the pattern.
             if (acceptorIsPresent) {
                 // If an acceptor is present, add the matched pattern and start all over.
-                int idx = acceptor.token.size();
+                size_t idx = acceptor.token.size();
                 symbolTable.insert(make_pair(acceptor.token, pattern.substr(0, idx)));
 
                 // Decrement the counter i to start new pattern matching process.
@@ -105,7 +107,7 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
     return symbolTable;
 }
 
-int PatternMatcher::getNextTransition(unordered_map<std::string, set<int>> transitions, string s) {
+int PatternMatcher::getNextTransition(const unordered_map<std::string, set<int>>& transitions, const string& s) {
     for (const auto& transition : transitions) {
         if (transition.first == s) {
             return *transition.second.begin();
