@@ -14,14 +14,10 @@ public:
     unordered_map<int, DFA_State> getDfa();
     void setDfa(unordered_map<int, DFA_State> minimizedDfa);
 
-//    set<string> getTokens();
-//    void setTokens(set<string> newTokens);
-
     unordered_map<string, string> matchExpression(string expression);
 
 private:
     unordered_map<int, DFA_State> dfa;
-//    set<string> tokens;
 
     int getNextTransition(unordered_map<string, set<int>> transitions, string s);
 };

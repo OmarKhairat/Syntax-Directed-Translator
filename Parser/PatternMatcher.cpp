@@ -6,16 +6,6 @@
 
 PatternMatcher::PatternMatcher(unordered_map<int, DFA_State> minimizedDfa) {
     PatternMatcher::dfa = minimizedDfa;
-//    set<string> constructedTokens;
-//
-//    for (const auto& pair : dfa) {
-//        DFA_State state = pair.second;
-//        if (state.is_acceptance) {
-//            constructedTokens.insert(state.token);
-//        }
-//    }
-//
-//    PatternMatcher::tokens = constructedTokens;
 }
 
 unordered_map<int, DFA_State> PatternMatcher::getDfa() {
@@ -25,14 +15,6 @@ unordered_map<int, DFA_State> PatternMatcher::getDfa() {
 void PatternMatcher::setDfa(unordered_map<int, DFA_State> minimizedDfa) {
     PatternMatcher::dfa = minimizedDfa;
 }
-
-//set<string> PatternMatcher::getTokens() {
-//    return PatternMatcher::tokens;
-//}
-
-//void PatternMatcher::setTokens(set<string> newTokens) {
-//    PatternMatcher::tokens = newTokens;
-//}
 
 /**
  * @brief Brief description of the function.
@@ -90,14 +72,8 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
                 acceptor = currentState;
                 counter = 0;
                 acceptorIsPresent = true;
-            }
-
-            // However, If the program encountered an acceptance state and
-            // its token's priority is higher than current acceptor's priority,
-            // Set the last acceptor to current state.
-            if (currentState.priority > acceptor.priority) {
+            } else {
                 acceptor = currentState;
-                counter = 0;
             }
         }
 
