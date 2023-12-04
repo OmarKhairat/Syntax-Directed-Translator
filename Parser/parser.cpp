@@ -855,11 +855,13 @@ unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> 
     unordered_map<int, DFA_State> dfa_states;
     queue<set<int>> unmarked_states;
     set<int> start_state_closure;
+
     for (int start_state : nfa.start_states)
     {
         // insert epsilon closure of start state
         start_state_closure.insert(epsilon_closure_set_map[start_state].begin(), epsilon_closure_set_map[start_state].end());
     }
+
 
      std::cout << "nfa_end_states: ";
     for (const int& state : nfa.end_states) {
@@ -869,8 +871,21 @@ unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> 
     // TODO: push ep_closure(start_state) to the queue
     unmarked_states.push(start_state_closure);
     int dfa_state_id = 0;
-
-
+     set<string> input_symbols;
+    for (const auto &state : nfa.states)
+    {
+        for (const auto &transition : state.second.transitions)
+        {
+            if (transition.first != "\\L")
+            {
+                input_symbols.insert(transition.first);
+            }
+        }
+    }
+    int DEAD_STATE_ID = -2;
+    DFA_State dead_state;
+    dead_state.is_acceptance = false;
+    dfa_states[DEAD_STATE_ID] = dead_state;
     while(!unmarked_states.empty())
     {
         DFA_State dfa_state;
@@ -912,6 +927,14 @@ unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> 
             }
         }
 
+
+          for (const auto &symbol : input_symbols)
+        {
+            if (combined_transitions.find(symbol) == combined_transitions.end())
+            {
+                combined_transitions[symbol].insert(DEAD_STATE_ID);
+            }
+        }
         // covert each transition set to its epsilon closure
         for(auto &transition : combined_transitions)
         {
@@ -925,7 +948,6 @@ unordered_map<int, DFA_State> constructDFA(NFA &nfa, unordered_map<string, int> 
             combined_transitions[transition.first] = target_states_epsilon_closure;
             target_states = target_states_epsilon_closure;
         }
-
         dfa_state.transitions = combined_transitions;
         dfa_states[dfa_state_id] = dfa_state;
         for (const auto& entry : combined_transitions) {
@@ -971,14 +993,20 @@ std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<i
     for (const auto& dfa_entry : dfa_states) {
         const DFA_State& dfa_state = dfa_entry.second;
         DFA_State updated_dfa_state = dfa_state;  // Make a copy
-
         for (auto& transition_entry : updated_dfa_state.transitions) {
             const std::string& transition_key = transition_entry.first;
             std::set<int>& nfa_states = transition_entry.second;
-
             // Create a new set to store the updated IDs
             std::set<int> updated_nfa_states;
-
+              for (const auto& entry : dfa_states) {
+        const std::set<int>& nfaStatesSet = entry.second.nfa_states;
+        if (nfaStatesSet == nfa_states) {
+             int dfa_state_id = entry.first;
+              updated_nfa_states.insert(dfa_state_id);
+              transition_entry.second = updated_nfa_states;
+            break;
+        }
+        /*
             // Iterate over the original set and replace with corresponding IDs
             for (int nfa_state : nfa_states) {
                 // Use the function to get the ID from the set of DFA states
@@ -987,30 +1015,48 @@ std::unordered_map<int, DFA_State> processTransitions(const std::unordered_map<i
                 // Add the ID to the updated set
                 updated_nfa_states.insert(dfa_state_id);
             }
-
+            */
             // Update the transitions with the new set of IDs
-            transition_entry.second = updated_nfa_states;
         }
 
         // Add the updated DFA state to the result map
-        updated_dfa_states[dfa_entry.first] = updated_dfa_state;
-    }
 
+    }
+     updated_dfa_states[dfa_entry.first] = updated_dfa_state;
+    }
     return updated_dfa_states;
 }
 
 
 // Function to minimize a DFA
 std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA_State>& dfa_states, unordered_map<string, int> priority) {
-    std::unordered_set<int> acceptance_states;
-    std::unordered_set<int> non_acceptance_states;
-    for (const auto& entry : dfa_states) {
+   std::unordered_set<int> acceptance_states;
+std::unordered_set<int> non_acceptance_states;
+  std::unordered_map<int, DFA_State> minimizedDFA;
+for (const auto& entry : dfa_states) {
+    if (entry.first != -2) {
         if (entry.second.is_acceptance) {
             acceptance_states.insert(entry.first);
         } else {
             non_acceptance_states.insert(entry.first);
         }
     }
+}
+
+ int DEAD_STATE_ID = -2;
+    DFA_State dead_state;
+    dead_state.is_acceptance = false;
+    dead_state.nfa_states = { -2 };
+     std::set<std::string> input_symbols;
+    for (const auto& entry : dfa_states) {
+        for (const auto& transition : entry.second.transitions) {
+            if (transition.first != "\\L") {
+                input_symbols.insert(transition.first);
+            }
+        }
+    }
+     minimizedDFA[DEAD_STATE_ID] = dead_state;
+
     // Helper function to check if two states are equivalent
     auto areEquivalent = [](const DFA_State& state1, const DFA_State& state2) {
     return (state1.is_acceptance == state2.is_acceptance) &&
@@ -1058,7 +1104,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         }
     }
 
-    std::unordered_map<int, DFA_State> minimizedDFA;
+
     for (size_t i = 0; i < equivalenceClassesAcceptance.size(); ++i) {
         int id = equivalenceClassIds[i];
         DFA_State newState;
@@ -1093,7 +1139,12 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
-            int targetStateId = -1;
+             if (input_symbols.find(input) == input_symbols.end()) {
+                minimizedDFA[id].transitions[input].insert(DEAD_STATE_ID);
+            }
+            else
+            {
+                            int targetStateId = -1;
             for (size_t j = 0; j < equivalenceClassesAcceptance.size(); ++j) {
                 auto& currentSet = equivalenceClassesAcceptance[j];
                 for (const auto& entry : dfa_states) {
@@ -1122,6 +1173,8 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
             }
         }
         minimizedDFA[id].transitions[input].insert(targetStateId);
+            }
+
         }
     }
 
@@ -1130,7 +1183,12 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
         int reusult = 0;
         for (const auto& transition : dfa_states.at(*equivalenceClassesNonAcceptance[i].begin()).transitions) {
             std::string input = transition.first;
-            int targetStateId = -1; // Default value if not found
+             if (input_symbols.find(input) == input_symbols.end()) {
+                minimizedDFA[id].transitions[input].insert(DEAD_STATE_ID);
+            }
+            else
+            {
+                  int targetStateId = -1; // Default value if not found
             // Search for the target state in equivalenceClassesNonAcceptance
            for (size_t j = 0; j < equivalenceClassesNonAcceptance.size(); ++j) {
                 auto& currentSet = equivalenceClassesNonAcceptance[j];
@@ -1160,6 +1218,8 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
                 }
             }
             minimizedDFA[id].transitions[input].insert(targetStateId);
+            }
+
         }
     }
 
@@ -1169,7 +1229,7 @@ std::unordered_map<int, DFA_State> minimizeDFA(const std::unordered_map<int, DFA
 int main()
 {
     Parser p;
-    vector<string> rules = p.get_rules_lines("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/lexical_rules.txt");
+    vector<string> rules = p.get_rules_lines("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/lexical_rules.txt");
 
     vector<string> keywords_lines = p.get_keywords_lines(rules);
     vector<string> keywords = p.parse_keywords(keywords_lines);
@@ -1193,14 +1253,14 @@ int main()
     unordered_map<string, int> priority = getPriority(exprs, keywords, punctuations);
 
     NFA exprs_nfa = convert_exprs_postfix_to_NFA(exprs, keywords, punctuations, priority);
-    exprs_nfa.toJSON("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/NFA.json");
+    exprs_nfa.toJSON("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/NFA.json");
     cout << "NFA created successfully with size = " << exprs_nfa.states.size() << endl;
 
     unordered_map<int, DFA_State> dfa_states = constructDFA(exprs_nfa, priority);
     unordered_map<int, DFA_State> modified_dfa_states = processTransitions(dfa_states);
     // Open a file for writing
 
-    std::ofstream outFile("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/dfa_states_output.txt");
+    std::ofstream outFile("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/Parser/dfa_states_output.txt");
 
     // Check if the file is open
     if (!outFile.is_open()) {
@@ -1244,7 +1304,7 @@ int main()
 
      std::size_t mapSize2 = minimzed_dfa_states.size();
     std::cout << "Size of the unordered_map: " << mapSize2 << std::endl;
-    std::ofstream outFile2("D:/E/Collage/Year_4_1/Compilers/Project/Syntax-Directed-Translator/dfa_states_output2.txt");
+    std::ofstream outFile2("C:/Users/abdel/Desktop/Connect-4/Syntax-Directed-Translator/Parser/dfa_states_output2.txt");
 
     // Check if the file is open
     if (!outFile2.is_open()) {
