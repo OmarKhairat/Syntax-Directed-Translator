@@ -89,7 +89,8 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
 
         if (next != -1) {
             currentState = dfa[next];
-            cout << "State: " << next << ", Is Accepting?: " << currentState.is_acceptance << ", Token = " << currentState.token << endl << endl;
+            cout << "State: " << next << ", Is Accepting?: " << currentState.is_acceptance << ", Token = "
+                 << currentState.token << endl << endl;
         }
 
         if (i == expression.size() - 1 || next == -1) {
@@ -121,8 +122,8 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
     return symbolTable;
 }
 
-int PatternMatcher::getNextTransition(const unordered_map<std::string, set<int>>& transitions, const string& s) {
-    for (const auto& transition : transitions) {
+int PatternMatcher::getNextTransition(const unordered_map<std::string, set<int>> &transitions, const string &s) {
+    for (const auto &transition: transitions) {
         if (transition.first == s) {
             cout << transition.first << " --> " << *transition.second.begin() << endl;
             return *transition.second.begin();

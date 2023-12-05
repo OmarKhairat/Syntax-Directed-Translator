@@ -21,7 +21,8 @@ public:
 
 private:
     unordered_map<int, DFA::State> dfa;
-    static int getNextTransition(const unordered_map<string, set<int>>& transitions, const string& s);
+
+    static int getNextTransition(const unordered_map<string, set<int>> &transitions, const string &s);
 };
 
 
