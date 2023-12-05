@@ -23,6 +23,8 @@ private:
     unordered_map<int, DFA::State> dfa;
 
     static int getNextTransition(const unordered_map<string, set<int>> &transitions, const string &s);
+
+    static void modifyAcceptor(const DFA::State &currentState, DFA::State &acceptor, int &counter, bool &acceptorIsPresent) ;
 };
 
 

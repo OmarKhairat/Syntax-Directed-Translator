@@ -23,6 +23,9 @@ public:
 
     static unordered_map<int, State> processTransitions(const unordered_map<int, State> &dfa_states);
 
+    static int
+    findIndex(const vector<unordered_set<int>> &equivalenceClasses, const unordered_set<int> &targetSet);
+
     static unordered_map<int, State>
     minimizeDFA(const unordered_map<int, State> &dfa_states, unordered_map<string, int> priority);
 };
