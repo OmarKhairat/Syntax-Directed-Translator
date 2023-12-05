@@ -52,7 +52,7 @@ vector<pair<string, string> > Parser::get_regular_def_lines(const vector<string>
         if (eqIdx != string::npos && eqIdx != 0 && eqIdx != rule.length() && rule[eqIdx - 1] == ' ' &&
             rule[eqIdx + 1] == ' ') {
             size_t colonIdx = rule.find(':');
-            if (colonIdx != string::npos && eqIdx > colonIdx)
+            if(colonIdx != string::npos && eqIdx > colonIdx)
                 continue;
             string LHS = rule.substr(0, eqIdx - 1);
             string RHS = rule.substr(eqIdx + 2);
@@ -69,7 +69,7 @@ vector<pair<string, string> > Parser::get_regular_expr_lines(const vector<string
         if (colonIdx != string::npos && colonIdx != 0 && colonIdx != rule.length() && rule[colonIdx + 1] == ' ' &&
             rule[colonIdx] != '\\') {
             size_t eqIdx = rule.find('=');
-            if (eqIdx != string::npos && colonIdx > eqIdx)
+            if(eqIdx != string::npos && colonIdx > eqIdx)
                 continue;
             string LHS = rule.substr(0, colonIdx);
             string RHS = rule.substr(colonIdx + 2);
@@ -174,7 +174,6 @@ vector<string> Parser::parse_rhs(string rhs_line) {
     string dummy;
     rhs_line = " " + rhs_line + " ";
     bool char_found = false;
-    // cout << "\t\trhs_line:" << rhs_line << endl;
     while (i < rhs_line.length()) {
         if (is_special_char(rhs_line[i]) && i != 0 && rhs_line[i - 1] != '\\') {
             char_found = true;
@@ -267,10 +266,8 @@ vector<string> Parser::infixtoPos(const vector<string> &infix) {
     vector<string> pos;
     stack<string> stck;
     unordered_map<string, int> special_chars;
-    special_chars["*"] = 5;
-    special_chars["+"] = 4;
-    special_chars["."] = 3;
-    special_chars["|"] = 2;
+    special_chars["*"] = 5; special_chars["+"] = 4;
+    special_chars["."] = 3; special_chars["|"] = 2;
     special_chars["("] = special_chars[")"] = 0;
     for (const string &token: infix) {
         if (token == "(") {
@@ -280,7 +277,7 @@ vector<string> Parser::infixtoPos(const vector<string> &infix) {
                 pos.push_back(stck.top());
                 stck.pop();
             }
-            if (!stck.empty())
+            if(!stck.empty())
                 stck.pop();
         } else if (token == "*" || token == "+" || token == "|" || token == ".") {
             while (!stck.empty() && special_chars[token] <= special_chars[stck.top()]) {
