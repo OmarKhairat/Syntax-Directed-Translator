@@ -33,12 +33,6 @@ int main() {
     vector<pair<string, string> > expr_lines = Parser::get_regular_expr_lines(rules);
     vector<pair<string, vector<string> > > exprs = Parser::parse_expr(expr_lines, defs);
     exprs = Parser::convert_exprs_to_pos(exprs);
-    // for (const auto& pair : exprs) {
-    //     cout << "key: " << pair.first << endl << "\t";
-    //     for(string tok : pair.second)
-    //         cout <<tok << " ";
-    //     cout << endl;
-    // }
 
     unordered_map<string, int> priority = getPriority(exprs, keywords, punctuations);
 
@@ -136,11 +130,17 @@ int main() {
 
     PatternMatcher pm(minimzed_dfa_states);
 
-    vector<pair<string, string>> symbolTable = pm.matchExpression("double extreme = yarab");
+    string expression = "int sum , count , pass , mnt; while (pass !\\=\n"
+                        "10)\n"
+                        "{\n"
+                        "pass = pass \\+ 1 ;\n"
+                        "}";
+
+    vector<pair<string, string>> symbolTable = pm.matchExpression(expression);
 
     // Print the contents of the unordered_map
-    for (const auto& pair : symbolTable) {
-        cout << endl << "Key: " << pair.first << ", Value: " << pair.second << endl;
+    for (const auto &pair: symbolTable) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
     return 0;
