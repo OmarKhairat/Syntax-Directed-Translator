@@ -6,15 +6,15 @@
  * All commented code is left over for further assumptions.
  * */
 
-PatternMatcher::PatternMatcher(unordered_map<int, DFA_State> minimizedDfa) {
+PatternMatcher::PatternMatcher(unordered_map<int, DFA::State> minimizedDfa) {
     PatternMatcher::dfa = std::move(minimizedDfa);
 }
 
-unordered_map<int, DFA_State> PatternMatcher::getDfa() {
+unordered_map<int, DFA::State> PatternMatcher::getDfa() {
     return PatternMatcher::dfa;
 }
 
-void PatternMatcher::setDfa(unordered_map<int, DFA_State> minimizedDfa) {
+void PatternMatcher::setDfa(unordered_map<int, DFA::State> minimizedDfa) {
     PatternMatcher::dfa = std::move(minimizedDfa);
 }
 
@@ -39,15 +39,16 @@ void PatternMatcher::setDfa(unordered_map<int, DFA_State> minimizedDfa) {
  *
  * Example usage:
  * @code
- * vector<string> matchedPatterns = PatternMatcher::matchExpression('xyz');
+ * vector<pair<string, string>> matchedPatterns = PatternMatcher::matchExpression('xyz');
  * @endcode
  */
-unordered_map<string, string> PatternMatcher::matchExpression(string expression) {
-    unordered_map<string, string> symbolTable;
+vector<pair<string, string>> PatternMatcher::matchExpression(string expression) {
+    vector<pair<string, string>> symbolTable;
     string pattern;
 
-    DFA_State currentState = dfa[0]; // Starting state
-    DFA_State acceptor{};
+    DFA::State currentState = dfa[0]; // Starting state
+    DFA::State acceptor{};
+    cout << "State 0 is accepting? " << currentState.is_acceptance << endl;
 
     int next;
     int counter = 0; // Keeps track of how many characters after last accepted pattern
@@ -66,6 +67,8 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
                 s += expression[i + 1];
             }
             i++;
+            counter++;
+            pattern += expression[i + 1];
         }
 
         if (currentState.is_acceptance) {
@@ -76,31 +79,42 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
                 acceptorIsPresent = true;
             } else {
                 acceptor = currentState;
+                counter = 0;
             }
         }
 
-        transitions = currentState.transitions;
-
         // Check if current character is valid.
+        transitions = currentState.transitions;
         next = getNextTransition(transitions, s);
 
         if (next != -1) {
             currentState = dfa[next];
-        } else {
+            cout << "State: " << next << ", Is Accepting?: " << currentState.is_acceptance << ", Token = " << currentState.token << endl << endl;
+        }
+
+        if (i == expression.size() - 1 || next == -1) {
+            cout << "ENTERED TOKEN DETECTION PHASE" << endl;
             // An error has occurred. Remove the last acceptor's token from the pattern.
             if (acceptorIsPresent) {
+                cout << "Acceptor is present. Token = " << acceptor.token << ", Pattern = " << pattern << endl;
+                cout << counter << endl;
                 // If an acceptor is present, add the matched pattern and start all over.
                 size_t idx = acceptor.token.size();
-                symbolTable.insert(make_pair(acceptor.token, pattern.substr(0, idx)));
+                symbolTable.emplace_back(acceptor.token, pattern.substr(0, idx));
 
                 // Decrement the counter i to start new pattern matching process.
                 i -= counter;
                 counter = 0;
             } else {
+                cout << "Acceptor is not present." << endl;
                 // If no acceptor is available, then the pattern is reported to give an error.
-                symbolTable.insert(make_pair("error", pattern));
+                symbolTable.emplace_back("error", pattern);
             }
+
+            // Reset all variables.
             pattern = "";
+            acceptorIsPresent = false;
+            acceptor = {};
         }
     }
 
@@ -110,6 +124,7 @@ unordered_map<string, string> PatternMatcher::matchExpression(string expression)
 int PatternMatcher::getNextTransition(const unordered_map<std::string, set<int>>& transitions, const string& s) {
     for (const auto& transition : transitions) {
         if (transition.first == s) {
+            cout << transition.first << " --> " << *transition.second.begin() << endl;
             return *transition.second.begin();
         }
     }

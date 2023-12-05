@@ -11,6 +11,10 @@ add_executable(Syntax_Directed_Translator
         LexicalAnalyzer/lexicalAnalyzer.h
         Parser/parser.cpp
         Parser/parser.h
-        patternmatcher/PatternMatcher.cpp
-        patternmatcher/PatternMatcher.h
-        main.cpp)
+        PatternMatcher/PatternMatcher.cpp
+        PatternMatcher/PatternMatcher.h
+        main.cpp
+        NFA/NFA.h
+        NFA/NFA.cpp
+        DFA/DFA.h
+        DFA/DFA.cpp)
