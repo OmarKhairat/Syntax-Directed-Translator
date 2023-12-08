@@ -48,7 +48,6 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
 
     DFA::State currentState = dfa[1]; // Starting state
     DFA::State acceptor{};
-    cout << "Start state is accepting? " << currentState.is_acceptance << endl;
 
     int next;
     int counter = 0; // Keeps track of how many characters after last accepted pattern
@@ -63,8 +62,6 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
 
         pattern += s;
         counter++;
-
-        cout << endl << "CURRENT MATCHING ===> " << pattern << ", " << s << endl << endl;
 
         if (s == "\\") {
             // Check next char
@@ -82,11 +79,7 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
 
         if (next > -1) {
             currentState = dfa[next];
-
             modifyAcceptor(currentState, acceptor, counter, acceptorIsPresent);
-
-            cout << "State: " << next << ", Is Accepting?: " << currentState.is_acceptance << ", Token = "
-                 << currentState.token << endl << endl;
         }
 
 
@@ -100,11 +93,8 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
         }
 
         if (i == expression.size() - 1 || next < 0) {
-            cout << "ENTERED TOKEN DETECTION PHASE" << endl;
             // An error has occurred. Remove the last acceptor's token from the pattern.
             if (acceptorIsPresent) {
-                cout << "Acceptor is present. Token = " << acceptor.token << ", Pattern = " << pattern << endl;
-                cout << counter << endl;
                 // If an acceptor is present, add the matched pattern and start all over.
                 size_t idx = pattern.size();
                 symbolTable.emplace_back(acceptor.token, pattern.substr(0, idx - counter));
@@ -116,7 +106,6 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
                 if (s == " " || s == "\n" || s =="\t") {
                     // Skip spaces.
                 } else {
-                    cout << "Acceptor is not present." << endl << endl;
                     // If no acceptor is available, then the pattern is reported to give an error.
                     symbolTable.emplace_back("error", pattern);
                 }
@@ -151,7 +140,6 @@ PatternMatcher::modifyAcceptor(const DFA::State &currentState, DFA::State &accep
 int PatternMatcher::getNextTransition(const unordered_map<std::string, set<int>> &transitions, const string &s) {
     for (const auto &transition: transitions) {
         if (transition.first == s) {
-            cout << transition.first << " --> " << *transition.second.begin() << endl;
             return *transition.second.begin();
         }
     }
