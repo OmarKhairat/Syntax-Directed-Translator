@@ -82,6 +82,14 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
             modifyAcceptor(currentState, acceptor, counter, acceptorIsPresent);
         }
 
+        if (i == expression.size() - 2) {
+            cout << endl << "Character = " << expression[i] << endl;
+            for (const auto &t: transitions) {
+                cout << t.first << "-->" << *t.second.begin() << endl;
+            }
+            cout << endl << endl;
+        }
+
 
         // Special (Corner) case.
         if (i == expression.size() - 1) {
@@ -99,7 +107,7 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
                 size_t idx = pattern.size();
                 symbolTable.emplace_back(acceptor.token, pattern.substr(0, idx - counter));
 
-                // Decrement the counter i to start new pattern matching process.
+                // Decrement i by the counter to start new pattern matching process.
                 i -= counter;
                 counter = 0;
             } else {

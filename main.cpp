@@ -136,17 +136,52 @@ int main() {
                         "pass = pass \\+ 1 ;\n"
                         "}";
 
-    string testString = "abc@123";
+    string testString = "int n = 3\n"
+                        "float f = 56\\.7;\n"
+                        "float f2 = 5\\.67E1\n"
+                        "x x,x 5 n \n"
+                        "if (f >50) { f = f2 / 2}\n"
+                        "else { f = f2 \\* 2}";
+
+    string test2 = "int x = 70 e b);";
+
+    string test3 = "int x = 70&y;";
+
+    string test4 = "boolean x = 0\n"
+                   "boolean x = false ";
 
     vector<pair<string, string>> symbolTable = pm.matchExpression(testProgram);
-    vector<pair<string, string>> symbolTable2 = pm.matchExpression(testString);
+    vector<pair<string, string>> testSymbolTable1 = pm.matchExpression(testString);
+    vector<pair<string, string>> testSymbolTable2 = pm.matchExpression(test2);
+    vector<pair<string, string>> testSymbolTable3 = pm.matchExpression(test3);
+    vector<pair<string, string>> testSymbolTable4 = pm.matchExpression(test4);
 
-    // Print the contents of the symbrol Table
+    // Print the contents of the symbol Table
     for (const auto &pair: symbolTable) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
-    for (const auto &pair: symbolTable2) {
+    cout << endl << endl;
+
+    for (const auto &pair: testSymbolTable1) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
+    }
+
+    cout << endl << endl;
+
+    for (const auto &pair: testSymbolTable2) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
+    }
+
+    cout << endl << endl;
+
+    for (const auto &pair: testSymbolTable3) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
+    }
+
+    cout << endl << endl;
+
+    for (const auto &pair: testSymbolTable4) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
