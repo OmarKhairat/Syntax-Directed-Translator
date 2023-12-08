@@ -210,7 +210,10 @@ void NFA::processSymbol(string symbol) {
         new_nfa.addState(new_end_state);
 
         if (c == '\\') {
-            new_nfa.addTransition(new_start_state, symbol.substr(i, 2), new_end_state);
+            if(symbol[i+1] == 'L')
+                new_nfa.addTransition(new_start_state, symbol.substr(i, 2), new_end_state);
+            else
+                new_nfa.addTransition(new_start_state, string(1, symbol[i+1]), new_end_state);
 
         } else {
             new_nfa.addTransition(new_start_state, string(1, c), new_end_state);
