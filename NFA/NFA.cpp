@@ -1,6 +1,8 @@
 #include "NFA.h"
+#include <iostream>
+#include <fstream>
 
-#include <utility>
+using namespace std;
 
 NFA::NFA() {
     stateCounter = 0;

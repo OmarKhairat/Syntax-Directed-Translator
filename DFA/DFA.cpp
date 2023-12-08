@@ -1,5 +1,7 @@
 #include "DFA.h"
 
+using namespace std;
+
 int DFA::getDFAStateIDFromNFAStates(const unordered_map<int, DFA::State> &dfa_states, int target_nfa_state) {
     for (const auto &dfa_entry: dfa_states) {
         const State &dfa_state = dfa_entry.second;

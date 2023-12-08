@@ -1,10 +1,9 @@
-#include <vector>
-#include <stack>
-#include "Parser.h"
-
 #ifndef SYNTAX_DIRECTED_TRANSLATOR_NFA_H
 #define SYNTAX_DIRECTED_TRANSLATOR_NFA_H
 
+#include <bits/stdc++.h>
+
+using namespace std;
 
 class NFA {
 public:

@@ -1,8 +1,4 @@
 #include "parser.h"
-#include "../NFA/NFA.h"
-#include <unordered_map>
-#include <stack>
-#include <set>
 #include <iostream>
 #include <fstream>
 

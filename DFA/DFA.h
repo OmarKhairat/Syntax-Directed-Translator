@@ -1,10 +1,8 @@
-#include <set>
-#include <string>
-#include <unordered_map>
-#include "../NFA/NFA.h"
-
 #ifndef SYNTAX_DIRECTED_TRANSLATOR_DFA_H
 #define SYNTAX_DIRECTED_TRANSLATOR_DFA_H
+
+#include <bits/stdc++.h>
+#include "../NFA/NFA.h"
 
 using namespace std;
 

@@ -3,7 +3,7 @@
 #include "patternmatcher/PatternMatcher.h"
 #include "NFA/NFA.h"
 #include "DFA/DFA.h"
-#include "parser.h"
+#include "Parser/parser.h"
 #include <sstream>
 
 using namespace std;
