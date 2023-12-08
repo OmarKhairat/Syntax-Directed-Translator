@@ -16,8 +16,8 @@ NFA convert_exprs_postfix_to_NFA(const vector<pair<string, vector<string>>> &exp
                                  const vector<string> &punctuations);
 
 int main() {
-    string projectPath = "D:\\Syntax-Directed-Translator\\";
-    string outPath = projectPath + "Outputs\\";
+    string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
+    string outPath = projectPath + R"(Outputs\)";
 
     vector<string> rules = Parser::get_rules_lines(projectPath + "lexical_rules.txt");
 
@@ -130,16 +130,23 @@ int main() {
 
     PatternMatcher pm(minimzed_dfa_states);
 
-    string expression = "int sum , count , pass , mnt; while (pass !\\=\n"
+    string testProgram = "int sum , count , pass , mnt; while (pass !\\=\n"
                         "10)\n"
                         "{\n"
                         "pass = pass \\+ 1 ;\n"
                         "}";
 
-    vector<pair<string, string>> symbolTable = pm.matchExpression(expression);
+    string testString = "abc@123";
 
-    // Print the contents of the unordered_map
+    vector<pair<string, string>> symbolTable = pm.matchExpression(testProgram);
+    vector<pair<string, string>> symbolTable2 = pm.matchExpression(testString);
+
+    // Print the contents of the symbrol Table
     for (const auto &pair: symbolTable) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
+    }
+
+    for (const auto &pair: symbolTable2) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 

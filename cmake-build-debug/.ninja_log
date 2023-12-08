@@ -1,0 +1,19 @@
+# ninja log v5
+1	4698	7237424871765501	CMakeFiles/Syntax_Directed_Translator.dir/LexicalAnalyzer/lexicalAnalyzer.cpp.obj	8b403571c18fc63b
+16	5705	7237424882266732	CMakeFiles/Syntax_Directed_Translator.dir/PatternMatcher/PatternMatcher.cpp.obj	5987492047326569
+48	7448	7237424899680413	CMakeFiles/Syntax_Directed_Translator.dir/DFA/DFA.cpp.obj	477bc39b0d8a5076
+25	6582	7237424891034435	CMakeFiles/Syntax_Directed_Translator.dir/Parser/parser.cpp.obj	18fcc340bb954244
+59	6863	7237424893570987	CMakeFiles/Syntax_Directed_Translator.dir/NFA/NFA.cpp.obj	7145327c68e44345
+8	7027	7237424895437178	CMakeFiles/Syntax_Directed_Translator.dir/main.cpp.obj	1d1d280dd259e2b9
+7448	9575	7237424920955808	Syntax_Directed_Translator.exe	57b3d5703536f9bf
+19	3364	7237443067987303	CMakeFiles/Syntax_Directed_Translator.dir/LexicalAnalyzer/lexicalAnalyzer.cpp.obj	c8385f759780436a
+47	4343	7237443078317195	CMakeFiles/Syntax_Directed_Translator.dir/PatternMatcher/PatternMatcher.cpp.obj	515d839eedef0c64
+30	4791	7237443082755990	CMakeFiles/Syntax_Directed_Translator.dir/Parser/parser.cpp.obj	aecf84309ddb6779
+73	4999	7237443084808688	CMakeFiles/Syntax_Directed_Translator.dir/NFA/NFA.cpp.obj	2c4822f4078e3615
+62	5276	7237443087577646	CMakeFiles/Syntax_Directed_Translator.dir/DFA/DFA.cpp.obj	95535dffc1a419a
+9	3595	7237443824926843	CMakeFiles/Syntax_Directed_Translator.dir/main.cpp.obj	3919310ce41490f0
+3596	5711	7237443846047438	Syntax_Directed_Translator.exe	57b3d5703536f9bf
+8	2888	7237444912705094	CMakeFiles/Syntax_Directed_Translator.dir/main.cpp.obj	3919310ce41490f0
+2889	4784	7237444931617580	Syntax_Directed_Translator.exe	57b3d5703536f9bf
+6	3202	7237445928440033	CMakeFiles/Syntax_Directed_Translator.dir/main.cpp.obj	3919310ce41490f0
+3203	5147	7237445947842641	Syntax_Directed_Translator.exe	57b3d5703536f9bf
