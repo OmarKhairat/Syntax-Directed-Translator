@@ -44,3 +44,6 @@ Parser/output/parser
 Parser/output/parser.dSYM/Contents/Resources/DWARF/parser
 LexicalAnalyzer/output/lexicalAnalyzer
 NFA.json
+Syntax-Directed-Translator.cbp
+Syntax-Directed-Translator.depend
+Syntax-Directed-Translator.layout
