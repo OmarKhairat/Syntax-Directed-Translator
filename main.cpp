@@ -136,6 +136,12 @@ int main() {
                         "pass = pass \\+ 1 ;\n"
                         "}";
 
+    vector<pair<string, string>> symbolTable = pm.matchExpression(testProgram);
+
+    for (const auto &pair: symbolTable) {
+        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
+    }
+
     string testString = "int n = 3\n"
                         "float f = 56\\.7;\n"
                         "float f2 = 5\\.67E1\n"
@@ -143,45 +149,34 @@ int main() {
                         "if (f >50) { f = f2 / 2}\n"
                         "else { f = f2 \\* 2}";
 
-    string test2 = "int x = 70 e b);";
+    symbolTable = pm.matchExpression(testString);
 
-    string test3 = "int x = 70&y;";
-
-    string test4 = "boolean x = 0\n"
-                   "boolean x = false ";
-
-    vector<pair<string, string>> symbolTable = pm.matchExpression(testProgram);
-    vector<pair<string, string>> testSymbolTable1 = pm.matchExpression(testString);
-    vector<pair<string, string>> testSymbolTable2 = pm.matchExpression(test2);
-    vector<pair<string, string>> testSymbolTable3 = pm.matchExpression(test3);
-    vector<pair<string, string>> testSymbolTable4 = pm.matchExpression(test4);
-
-    // Print the contents of the symbol Table
     for (const auto &pair: symbolTable) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
-    cout << endl << endl;
+    string test2 = "int x = 70 e b);";
 
-    for (const auto &pair: testSymbolTable1) {
+    symbolTable = pm.matchExpression(test2);
+
+    for (const auto &pair: symbolTable) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
-    cout << endl << endl;
+    string test3 = "int x = 70&y;";
 
-    for (const auto &pair: testSymbolTable2) {
+    symbolTable = pm.matchExpression(test3);
+
+    for (const auto &pair: symbolTable) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
-    cout << endl << endl;
+    string test4 = "boolean x = 0\n"
+                   "boolean x = false ";
 
-    for (const auto &pair: testSymbolTable3) {
-        cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
-    }
+    symbolTable = pm.matchExpression(test4);
 
-    cout << endl << endl;
-
-    for (const auto &pair: testSymbolTable4) {
+    for (const auto &pair: symbolTable) {
         cout << "TOKEN = " << pair.first << " --- MATCHED PATTERN = " << pair.second << endl;
     }
 
