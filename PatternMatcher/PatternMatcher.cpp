@@ -82,18 +82,9 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression) 
             modifyAcceptor(currentState, acceptor, counter, acceptorIsPresent);
         }
 
-        if (i == expression.size() - 2) {
-            cout << endl << "Character = " << expression[i] << endl;
-            for (const auto &t: transitions) {
-                cout << t.first << "-->" << *t.second.begin() << endl;
-            }
-            cout << endl << endl;
-        }
-
-
         // Special (Corner) case.
         if (i == expression.size() - 1) {
-            if (currentState.is_acceptance) {
+            if (currentState.is_acceptance && !acceptorIsPresent) {
                 acceptor = currentState;
                 counter = 0;
                 acceptorIsPresent = true;
