@@ -4,12 +4,13 @@
 #include <string>
 #include "../DFA/DFA.h"
 
-#ifndef SYNTAX_DIRECTED_TRANSLATOR_TRANSITIONTABLE_H
-#define SYNTAX_DIRECTED_TRANSLATOR_TRANSITIONTABLE_H
+#ifndef SYNTAX_DIRECTED_TRANSLATOR_PATTERNMATCHER_H
+#define SYNTAX_DIRECTED_TRANSLATOR_PATTERNMATCHER_H
 
 using namespace std;
 
-class PatternMatcher {
+class PatternMatcher
+{
 public:
     explicit PatternMatcher(unordered_map<int, DFA::State> minimizedDfa);
 
@@ -24,8 +25,7 @@ private:
 
     static int getNextTransition(const unordered_map<string, set<int>> &transitions, const string &s);
 
-    static void modifyAcceptor(const DFA::State &currentState, DFA::State &acceptor, int &counter, bool &acceptorIsPresent) ;
+    static void modifyAcceptor(const DFA::State &currentState, DFA::State &acceptor, int &counter, bool &acceptorIsPresent);
 };
 
-
-#endif //SYNTAX_DIRECTED_TRANSLATOR_TRANSITIONTABLE_H
+#endif // SYNTAX_DIRECTED_TRANSLATOR_PATTERNMATCHER_H

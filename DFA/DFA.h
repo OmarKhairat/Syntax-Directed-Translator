@@ -1,21 +1,24 @@
 #ifndef SYNTAX_DIRECTED_TRANSLATOR_DFA_H
 #define SYNTAX_DIRECTED_TRANSLATOR_DFA_H
 
-#include <bits/stdc++.h>
 #include "../NFA/NFA.h"
+#include <vector>
+#include <unordered_set>
 
 using namespace std;
 
-class DFA {
+class DFA
+{
 public:
-    struct State {
+    struct State
+    {
         set<int> nfa_states;
         bool is_acceptance;
         string token;
         unordered_map<string, set<int>> transitions;
     };
 
-    static int getDFAStateIDFromNFAStates(const std::unordered_map<int, State> &dfa_states, int target_nfa_state);
+    static int getDFAStateIDFromNFAStates(const unordered_map<int, State> &dfa_states, int target_nfa_state);
 
     static unordered_map<int, State> constructDFA(NFA &nfa, unordered_map<string, int> priority);
 
@@ -28,4 +31,4 @@ public:
     minimizeDFA(const unordered_map<int, State> &dfa_states, unordered_map<string, int> priority);
 };
 
-#endif //SYNTAX_DIRECTED_TRANSLATOR_DFA_H
+#endif // SYNTAX_DIRECTED_TRANSLATOR_DFA_H
