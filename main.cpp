@@ -15,7 +15,7 @@ NFA convert_exprs_postfix_to_NFA(const vector<pair<string, vector<string>>> &exp
 
 int main()
 {
-    string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
     string outPath = projectPath + R"(Outputs\)";
 
     vector<string> rules = Parser::get_rules_lines(projectPath + "lexical_rules.txt");
@@ -137,12 +137,25 @@ int main()
     // Close the file
     outFile2.close();
 
-    PatternMatcher pm(minimzed_dfa_states);
+    // get start state
+    int startState = 0;
+    for (const auto &entry : minimzed_dfa_states)
+    {
+        int dfa_state_id = entry.first;
+        const DFA::State &dfa_state = entry.second;
+        if (dfa_state.nfa_states.find(0) != dfa_state.nfa_states.end())
+        {
+            startState = dfa_state_id;
+            break;
+        }
+    }
 
-    string testProgram = "int sum , count , pass , mnt; while (pass !\\=\n"
+    PatternMatcher pm(minimzed_dfa_states, startState);
+
+    string testProgram = "int sum , count , pass , mnt; while (pass !=\n"
                          "10)\n"
                          "{\n"
-                         "pass = pass \\+ 1 ;\n"
+                         "pass = pass + 1 ;\n"
                          "}";
 
     vector<pair<string, string>> symbolTable = pm.matchExpression(testProgram);
@@ -153,11 +166,11 @@ int main()
     }
 
     string testString = "int n = 3\n"
-                        "float f = 56\\.7;\n"
-                        "float f2 = 5\\.67E1\n"
+                        "float f = 56.7;\n"
+                        "float f2 = 5.67E1\n"
                         "x x,x 5 n \n"
                         "if (f >50) { f = f2 / 2}\n"
-                        "else { f = f2 \\* 2}";
+                        "else { f = f2 * 2}";
 
     symbolTable = pm.matchExpression(testString);
 

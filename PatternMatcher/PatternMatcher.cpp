@@ -6,9 +6,10 @@
  * All commented code is left over for further assumptions.
  * */
 
-PatternMatcher::PatternMatcher(unordered_map<int, DFA::State> minimizedDfa)
+PatternMatcher::PatternMatcher(unordered_map<int, DFA::State> minimizedDfa, int startState)
 {
     PatternMatcher::dfa = std::move(minimizedDfa);
+    PatternMatcher::startState = startState;
 }
 
 unordered_map<int, DFA::State> PatternMatcher::getDfa()
@@ -50,7 +51,7 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression)
     vector<pair<string, string>> symbolTable;
     string pattern;
 
-    DFA::State currentState = dfa[1]; // Starting state
+    DFA::State currentState = dfa[startState]; // Starting state
     DFA::State acceptor{};
 
     int next;
@@ -129,7 +130,7 @@ vector<pair<string, string>> PatternMatcher::matchExpression(string expression)
 
             // Reset all variables.
             pattern = "";
-            currentState = dfa[1];
+            currentState = dfa[startState];
             acceptorIsPresent = false;
             acceptor = {};
         }

@@ -12,7 +12,7 @@ using namespace std;
 class PatternMatcher
 {
 public:
-    explicit PatternMatcher(unordered_map<int, DFA::State> minimizedDfa);
+    explicit PatternMatcher(unordered_map<int, DFA::State> minimizedDfa, int startState);
 
     unordered_map<int, DFA::State> getDfa();
 
@@ -22,6 +22,8 @@ public:
 
 private:
     unordered_map<int, DFA::State> dfa;
+
+    int startState;
 
     static int getNextTransition(const unordered_map<string, set<int>> &transitions, const string &s);
 
