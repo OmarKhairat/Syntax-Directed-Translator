@@ -25,6 +25,11 @@
 *.la
 *.a
 *.lib
+*.plist
+
+Syntax-Directed-Translator.cbp
+Syntax-Directed-Translator.depend
+Syntax-Directed-Translator.layout
 
 # Executables
 *.exe
@@ -34,18 +39,11 @@
 # Directories
 .vscode/
 .output/
-output/.DS_Store
-output/minn
-*.plist
-output/main.dSYM/Contents/Resources/DWARF/main
-output/minn.dSYM/Contents/Resources/DWARF/minn
-.DS_Store
-Parser/output/parser
-Parser/output/parser.dSYM/Contents/Resources/DWARF/parser
-LexicalAnalyzer/output/lexicalAnalyzer
-NFA.json
-Syntax-Directed-Translator.cbp
-Syntax-Directed-Translator.depend
-Syntax-Directed-Translator.layout
-build
-.idea
+output/
+Outputs/
+build/
+.DS_Store/
+.idea/
+cmake-build-debug/
+bin/
+debug/
