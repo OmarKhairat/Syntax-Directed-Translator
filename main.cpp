@@ -1,4 +1,5 @@
 #include "LexicalAnalyzer/LexicalAnalyzer.h"
+#include "CFGParser/CFGParser.h"
 #include <sstream>
 
 using namespace std;
@@ -7,6 +8,30 @@ int main()
 {
     string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
 
+    // Test CFGParser
+    unordered_map< string, set< vector<string> > > rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
+
+    // print rules_map
+    for (auto &rule : rules_map_set)
+    {
+        cout << rule.first << " -> ";
+        int i = 0;
+        for (auto &rhs : rule.second)
+        {
+            for (auto &rhs_part : rhs)
+            {
+                cout << rhs_part << " ";
+            }
+            if(i != rule.second.size() - 1)
+                cout << endl << "\t| ";
+            else{
+                cout << endl;
+            }
+            i++;
+        }
+    }
+
+    /*
     LexicalAnalyzerFactory factory(projectPath);
     LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
 
@@ -64,6 +89,7 @@ int main()
         pair<string, string> token = lexicalAnalyzer.getNextToken();
         cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
     }
+    */
 
     return 0;
 }
