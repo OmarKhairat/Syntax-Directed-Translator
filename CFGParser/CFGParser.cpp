@@ -64,8 +64,8 @@ bool is_special_char(char c)
     return res;
 }
 
-unordered_map<string, vector<string>> CFGParser::parse_rule(const vector<pair<string, string>> &rule_lines){
-    unordered_map<string, vector<string>> rules ;
+vector<pair<string, vector<string>>> CFGParser::parse_rule(const vector<pair<string, string>> &rule_lines){
+    vector<pair<string, vector<string>>> rules ;
     for(auto &rule: rule_lines){
         string LHS = rule.first;
         string RHS = rule.second;
@@ -91,7 +91,7 @@ unordered_map<string, vector<string>> CFGParser::parse_rule(const vector<pair<st
                         RHS_vector.push_back(RHS.substr(startToken, endToken-startToken));
                     }else{
                         //error in rules
-                        return unordered_map<string, vector<string>>();
+                        return vector<pair<string, vector<string>>>();
                     }
                 }
                 else if(RHS.at(endToken) == '\\' && endToken+1< RHS.length() && RHS.at(endToken+1) == 'L'){
@@ -117,34 +117,37 @@ unordered_map<string, vector<string>> CFGParser::parse_rule(const vector<pair<st
             // add the prev token if existed
             RHS_vector.push_back(RHS.substr(startToken, endToken-startToken));
         }
-        rules[LHS] = RHS_vector;
+        rules.push_back(make_pair(LHS, RHS_vector));
     }
     return rules;
 }
 
-unordered_map<string, set<vector<string>>> CFGParser::get_maped_rules(const unordered_map<string, vector<string>> &rules){
-    unordered_map<string, set<vector<string>>> maped_rules;
+vector<pair<string, set<vector<string>>>> CFGParser::get_maped_rules(const vector<pair<string, vector<string>>> &rules){
+    vector<pair<string, set<vector<string>>>> maped_rules;
     for(auto &rule: rules){
         string LHS = rule.first;
         vector<string> RHS = rule.second;
+        set<vector<string>> RHS_set ;
         size_t start = 0;
         for(size_t end = 0; end < RHS.size(); end++){
             if(RHS.at(end) == "|"){
                 if(start != end){
-                    maped_rules[LHS].insert(vector<string>(RHS.begin()+start, RHS.begin()+end));
+                    RHS_set.insert(vector<string>(RHS.begin()+start, RHS.begin()+end));
                 }
                 start = end+1;
             }
         }
         if(start != RHS.size()){
-            maped_rules[LHS].insert(vector<string>(RHS.begin()+start, RHS.end()));
+            RHS_set.insert(vector<string>(RHS.begin()+start, RHS.end()));
+            
         }
+        maped_rules.push_back(make_pair(LHS, RHS_set)) ;
     }
     return maped_rules;
 }
 
-unordered_map<string, set<vector<string>>> CFGParser::get_CFG_rules(const string &rules_file_path){
+vector<pair<string, set<vector<string>>>> CFGParser::get_CFG_rules(const string &rules_file_path){
     vector<pair<string, string>> rules = get_rules_lines(rules_file_path);
-    unordered_map<string, vector<string>> rules_map = parse_rule(rules);
+    vector<pair<string, vector<string>>> rules_map = parse_rule(rules);
     return get_maped_rules(rules_map);
 }

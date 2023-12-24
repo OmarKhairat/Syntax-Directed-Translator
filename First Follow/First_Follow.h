@@ -8,13 +8,15 @@
 #include <vector>
 #include <string>
 
+using namespace std;
+
 class First_Follow {
 public:
-    std::unordered_map<std::string, std::vector<std::string>> constructFirst(std::unordered_map<std::string, std::set<std::vector<std::string>>> inputMap);
-    std::unordered_map<std::string, std::vector<std::string>> constructFollow(std::unordered_map<std::string, std::set<std::vector<std::string>>> inputMap, std::unordered_map<std::string, std::vector<std::string>> First);
-    static bool isNonTerminal(const std::string &symbol);
+    std::unordered_map<std::string, std::vector<std::string>> constructFirst(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, const set<string> &nonTerminals);
+    std::unordered_map<std::string, std::vector<std::string>> constructFollow(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, std::unordered_map<std::string, std::vector<std::string>> First, const set<string> &nonTerminals);
+    static bool isNonTerminal(const std::string &symbol, const set<string> &nonTerminals);
     static std::vector<std::pair<std::string, std::string>> findAllOccurrences(
-        const std::unordered_map<std::string, std::set<std::vector<std::string>>> &inputMap,
+        const std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> &inputMap,
         const std::string &key);
 };
 

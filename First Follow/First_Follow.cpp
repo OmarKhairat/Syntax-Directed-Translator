@@ -6,85 +6,76 @@
 #include <vector>
 #include <string>
 #include <unordered_set>
-bool First_Follow::isNonTerminal(const std::string &symbol) {
-    // Check if the symbol is not empty
-    if (symbol.empty()) {
-        return false;
-    }
-
-    // Check if the symbol is all uppercase, ends with "'", or contains at least one underscore
-    return (std::all_of(symbol.begin(), symbol.end(), ::isupper) ||
-            (symbol.back() == '\'' &&
-             std::all_of(symbol.begin(), symbol.end() - 1, ::isupper)) ||
-            (std::any_of(symbol.begin(), symbol.end(), [](char c) { return c == '_'; }))) &&
-           (symbol != "Epsilon");
+bool First_Follow::isNonTerminal(const std::string &symbol, const set<string> &nonTerminals)
+{
+    return nonTerminals.find(symbol) != nonTerminals.end();
 }
 
-std::unordered_map<std::string, std::vector<std::string>> First_Follow::constructFirst(std::unordered_map<std::string, std::set<std::vector<std::string>>> inputMap)
+std::unordered_map<std::string, std::vector<std::string>> First_Follow::constructFirst(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, const set<string> &nonTerminals)
 {
     std::unordered_map<std::string, std::vector<std::string>> result;
 
-  for (auto it = inputMap.begin(); it != inputMap.end(); ++it)
+    for (int i = inputMap.size() - 1; i >= 0; i--)
+    {
+        const std::string &nonTerminal = inputMap.at(i).first;
+        const std::set<std::vector<std::string>> &productions = inputMap.at(i).second;
+
+        for (const std::vector<std::string> &production : productions)
         {
-            const std::string &nonTerminal = it->first;
-            const std::set<std::vector<std::string>> &productions = it->second;
+            bool containsEpsilon = true; // Assume all symbols have epsilon initially
 
-            for (const std::vector<std::string> &production : productions)
+            for (const std::string &symbol : production)
             {
-                bool containsEpsilon = true; // Assume all symbols have epsilon initially
-
-                for (const std::string &symbol : production)
+                if (isNonTerminal(symbol, nonTerminals))
                 {
-                    if (isNonTerminal(symbol))
-                    {
-                        auto findResult = result.find(symbol);
-                        if (findResult != result.end())
-                        {
-                            // Check for duplicates before inserting into the vector
-                            for (const auto &elem : findResult->second)
-                            {
-                                if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), elem) == result[nonTerminal].end())
-                                {
-                                    result[nonTerminal].push_back(elem);
-                                }
-                            }
-
-                            containsEpsilon &= (std::find(findResult->second.begin(), findResult->second.end(), "Epsilon") != findResult->second.end());
-                            if (!containsEpsilon)
-                                break;
-                        }
-                    }
-                    else
+                    auto findResult = result.find(symbol);
+                    if (findResult != result.end())
                     {
                         // Check for duplicates before inserting into the vector
-                        if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), symbol) == result[nonTerminal].end())
+                        for (const auto &elem : findResult->second)
                         {
-                            result[nonTerminal].push_back(symbol);
+                            if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), elem) == result[nonTerminal].end())
+                            {
+                                result[nonTerminal].push_back(elem);
+                            }
                         }
 
-                        containsEpsilon = false;
-                        break;
+                        containsEpsilon &= (std::find(findResult->second.begin(), findResult->second.end(), "\\L") != findResult->second.end());
+                        if (!containsEpsilon)
+                            break;
                     }
                 }
-
-                if (containsEpsilon && std::all_of(production.begin(), production.end(), [=](const std::string &symbol)
-                                                { return isNonTerminal(symbol) && result.at(symbol).empty(); }))
+                else
                 {
                     // Check for duplicates before inserting into the vector
-                    if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), "Epsilon") == result[nonTerminal].end())
+                    if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), symbol) == result[nonTerminal].end())
                     {
-                        result[nonTerminal].push_back("Epsilon");
+                        result[nonTerminal].push_back(symbol);
                     }
+
+                    containsEpsilon = false;
+                    break;
+                }
+            }
+
+            if (containsEpsilon && std::all_of(production.begin(), production.end(), [=](const std::string &symbol)
+                                               { return isNonTerminal(symbol, nonTerminals) && result.at(symbol).empty(); }))
+            {
+                // Check for duplicates before inserting into the vector
+                if (std::find(result[nonTerminal].begin(), result[nonTerminal].end(), "\\L") == result[nonTerminal].end())
+                {
+
+                    result[nonTerminal].push_back("\\L");
                 }
             }
         }
+    }
 
     return result;
 }
 
-
 std::vector<std::pair<std::string, std::string>> First_Follow::findAllOccurrences(
-    const std::unordered_map<std::string, std::set<std::vector<std::string>>> &inputMap,
+    const std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> &inputMap,
     const std::string &key)
 {
 
@@ -114,11 +105,11 @@ std::vector<std::pair<std::string, std::string>> First_Follow::findAllOccurrence
     return occurrences;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> First_Follow::constructFollow(std::unordered_map<std::string, std::set<std::vector<std::string>>> inputMap, std::unordered_map<std::string, std::vector<std::string>> First)
+std::unordered_map<std::string, std::vector<std::string>> First_Follow::constructFollow(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, std::unordered_map<std::string, std::vector<std::string>> First, const set<string> &nonTerminals)
 {
     std::unordered_map<std::string, std::vector<std::string>> result;
-    //auto it = std::prev(inputMap.end());
-   auto it = inputMap.begin();
+    // auto it = std::prev(inputMap.end());
+    auto it = inputMap.begin();
     const std::string &firstKey = it->first;
     result[firstKey].push_back("$");
     for (const auto &entry : inputMap)
@@ -130,26 +121,27 @@ std::unordered_map<std::string, std::vector<std::string>> First_Follow::construc
         {
             const std::string &nextElement = occurrence.first;
             const std::string &setKey = occurrence.second;
-             if (seenElements.find(nextElement) != seenElements.end()) {
-            // If seen, skip this occurrence
-            continue;
-        }
-            if (isNonTerminal(nextElement))
+            if (seenElements.find(nextElement) != seenElements.end())
+            {
+                // If seen, skip this occurrence
+                continue;
+            }
+            if (isNonTerminal(nextElement, nonTerminals))
             {
                 // If the next element is a non-terminal, append the First set of the next element to the result
                 auto &firstSetOfNextElement = First[nextElement];
                 result[currentKey].insert(result[currentKey].end(), firstSetOfNextElement.begin(), firstSetOfNextElement.end());
                 // If the First set of the next element contains epsilon, exclude "Epsilon" and append the Follow set of the set key to the result
-                auto epsilonFound = std::find(firstSetOfNextElement.begin(), firstSetOfNextElement.end(), "Epsilon");
+                auto epsilonFound = std::find(firstSetOfNextElement.begin(), firstSetOfNextElement.end(), "\\L");
                 if (epsilonFound != firstSetOfNextElement.end())
                 {
                     // Exclude "Epsilon" from the result
-                    result[currentKey].erase(std::remove(result[currentKey].begin(), result[currentKey].end(), "Epsilon"), result[currentKey].end());
+                    result[currentKey].erase(std::remove(result[currentKey].begin(), result[currentKey].end(), "\\L"), result[currentKey].end());
 
                     // Append the Follow set of the set key to the result
                     result[currentKey].insert(result[currentKey].end(), result[setKey].begin(), result[setKey].end());
                 }
-                 seenElements.insert(nextElement);
+                seenElements.insert(nextElement);
             }
             else if (nextElement.empty())
             {
@@ -167,4 +159,3 @@ std::unordered_map<std::string, std::vector<std::string>> First_Follow::construc
 
     return result;
 }
-

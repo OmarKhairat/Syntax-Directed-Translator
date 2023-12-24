@@ -6,11 +6,16 @@ using namespace std;
 
 int main()
 {
-    string projectPath = R"(C:\Users\abdel\Desktop\Connect-4\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-     std::unordered_map<std::string, std::set<std::vector<std::string>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "test1.txt");
-/*
+    std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
+    // get keys of the map
+    std::set<std::string> non_terminals;
+    for (const auto& entry : rules_map_set) {
+        non_terminals.insert(entry.first);
+    }
+
     // print rules_map
     for (auto &rule : rules_map_set)
     {
@@ -31,7 +36,7 @@ int main()
         }
     }
 
-*/
+
 /*
     std::unordered_map<std::string, std::set<std::vector<std::string>>> rules_map_set2;
 
@@ -69,6 +74,7 @@ int main()
         std::cout << std::endl;
     }
 */
+/*
   std::unordered_map<std::string, std::set<std::vector<std::string>>> rules_map_set2;
 
     // METHOD_BODY = STATEMENT_LIST
@@ -130,8 +136,10 @@ int main()
         }
         std::cout << std::endl;
     }
+*/
+
     First_Follow firstFollowObject;
-    std::unordered_map<std::string, std::vector<std::string>> First = firstFollowObject.constructFirst(rules_map_set2);
+    std::unordered_map<std::string, std::vector<std::string>> First = firstFollowObject.constructFirst(rules_map_set, non_terminals);
     for (const auto &entry : First) {
         const std::string &key = entry.first;
         const std::vector<std::string> &value = entry.second;

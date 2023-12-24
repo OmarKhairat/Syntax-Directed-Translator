@@ -5,6 +5,7 @@
         | WHILE
         | ASSIGNMENT
 # DECLARATION = PRIMITIVE_TYPE 'id' ';'
+# PRIMITIVE_TYPE = 'int' | 'float'
 # IF = 'if' '(' EXPRESSION ')' '{' STATEMENT '}'
 # WHILE = 'while' '(' EXPRESSION ')' '{' STATEMENT '}'
 # ASSIGNMENT = 'id' '=' EXPRESSION ';'
