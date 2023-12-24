@@ -1,32 +1,22 @@
 #include "ParsingTable.h"
 
 ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
-                           unordered_map<string, vector<string>> firsts,
-                           unordered_map<string, vector<string>> follows)
-{
-    // Assign the values to the class.
-    ParsingTable::grammar = grammar;
-    ParsingTable::firstSets = firsts;
-    ParsingTable::followSets = follows;
-
-    // Construct the table.
-    constructTable();
-}
-
-void ParsingTable::constructTable()
+                           unordered_map<string, vector<string>> firstSets,
+                           unordered_map<string, vector<string>> followSets)
 {
     // Initialize the table, a temporary token, and a vector for productions.
     unordered_map<string, unordered_map<string, vector<string>>> table;
     string nonTerminal;
-    vector<string> set;
+    vector<string> firstSet;
+    vector<string> followSet;
     vector<string> productions;
 
     cout << "GENERATING THE PARSING TABLE FIRST SET ENTRIES" << endl;
 
     // Loop over the elements in the first sets.
-    for (pair<string, vector<string>> firstSet : firstSets)
+    for (auto mapping = firstSets.end(); mapping != firstSets.begin(); --mapping)
     {
-        nonTerminal = firstSet.first;
+        nonTerminal = mapping->first;
 
         // Look for the productions of the current token.
         auto it = grammar.find(nonTerminal);
@@ -45,14 +35,23 @@ void ParsingTable::constructTable()
                 // in the current production while you're at it.
                 string s = p.substr(0, 1);
 
-                set = firstSet.second;
+                firstSet = mapping->second;
 
-                auto setIt = find(set.begin(), set.end(), s);
+                auto setIt = find(firstSet.begin(), firstSet.end(), s);
 
-                if (setIt != set.end())
+                if (setIt != firstSet.end())
                 {
                     // If found, add it to the parsing table.
                     table[nonTerminal][s].emplace_back(p);
+                }
+                else if (isupper(s[0]))
+                {
+                    // If the first character in the production is a non-terminal,
+                    // assign the columns of that non-terminal to the current token in the table.
+                    for (pair<string, vector<string>> column : table[s])
+                    {
+                        table[nonTerminal].insert(column);
+                    }
                 }
             }
             cout << endl;
@@ -69,9 +68,9 @@ void ParsingTable::constructTable()
     cout << "GENERATING THE PARSING TABLE FOLLOW SET ENTRIES" << endl;
 
     // Loop over the elements in the follow sets.
-    for (pair<string, vector<string>> followSet : followSets)
+    for (pair<string, vector<string>> mapping : followSets)
     {
-        nonTerminal = followSet.first;
+        nonTerminal = mapping.first;
 
         // Look for the productions of the current token.
         auto it = grammar.find(nonTerminal);
@@ -91,12 +90,11 @@ void ParsingTable::constructTable()
                 // to the table entry of which the column index is an ele-
                 // ment in the follow set of the current non-terminal.
 
-                // TODO: If p is an epsilon production
-                if ( ??? )
+                if (p == R"(\L)")
                 {
-                    set = followSet.second;
+                    followSet = mapping.second;
 
-                    for (string s : set)
+                    for (string s : followSet)
                     {
                         table[nonTerminal][s].emplace_back(p);
                     }
@@ -112,4 +110,11 @@ void ParsingTable::constructTable()
     }
 
     cout << "FOLLOW SET ENTRIES COMPLETE" << endl;
+
+    ParsingTable::table = table;
+}
+
+unordered_map<string, unordered_map<string, vector<string>>> ParsingTable::getTable()
+{
+    return table;
 }

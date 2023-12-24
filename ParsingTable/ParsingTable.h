@@ -21,15 +21,7 @@ public:
     unordered_map<string, unordered_map<string, vector<string>>> getTable();
 
 private:
-    unordered_map<string, vector<string>> grammar;
-
-    unordered_map<string, vector<string>> firstSets;
-
-    unordered_map<string, vector<string>> followSets;
-
     unordered_map<string, unordered_map<string, vector<string>>> table;
-
-    void constructTable();
 };
 
 #endif // SYNTAX_DIRECTED_TRANSLATOR_PARSINGTABLE_H
