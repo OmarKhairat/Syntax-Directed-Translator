@@ -1,15 +1,16 @@
 #include "ParsingTable.h"
 
-ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
+ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                            unordered_map<string, vector<string>> firstSets,
-                           unordered_map<string, vector<string>> followSets)
+                           unordered_map<string, vector<string>> followSets,
+                           set<string> nonTerminals)
 {
     // Initialize the table, a temporary token, and a vector for productions.
     unordered_map<string, unordered_map<string, vector<string>>> table;
     string nonTerminal;
     vector<string> firstSet;
     vector<string> followSet;
-    vector<string> productions;
+    set<vector<string>> productions;
 
     cout << "GENERATING THE PARSING TABLE FIRST SET ENTRIES" << endl;
 
@@ -19,7 +20,11 @@ ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
         nonTerminal = mapping->first;
 
         // Look for the productions of the current token.
-        auto it = grammar.find(nonTerminal);
+        auto it = find_if(grammar.begin(), grammar.end(),
+                          [nonTerminal](const auto &element)
+                          {
+                              return element.first == nonTerminal;
+                          });
 
         if (it != grammar.end())
         {
@@ -33,18 +38,23 @@ ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
 
                 // Check the occurence of the first element in the first set
                 // in the current production while you're at it.
-                string s = p.substr(0, 1);
+                istringstream iss(p);
+
+                string s;
+
+                iss >> s;
 
                 firstSet = mapping->second;
 
                 auto setIt = find(firstSet.begin(), firstSet.end(), s);
+                auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), s);
 
                 if (setIt != firstSet.end())
                 {
                     // If found, add it to the parsing table.
                     table[nonTerminal][s].emplace_back(p);
                 }
-                else if (isupper(s[0]))
+                else if (ntIt != nonTerminals.end())
                 {
                     // If the first character in the production is a non-terminal,
                     // assign the columns of that non-terminal to the current token in the table.
@@ -73,7 +83,11 @@ ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
         nonTerminal = mapping.first;
 
         // Look for the productions of the current token.
-        auto it = grammar.find(nonTerminal);
+        auto it = find_if(grammar.begin(), grammar.end(),
+                          [nonTerminal](const auto &element)
+                          {
+                              return element.first == nonTerminal;
+                          });
 
         if (it != grammar.end())
         {
@@ -81,6 +95,8 @@ ParsingTable::ParsingTable(unordered_map<string, vector<string>> grammar,
 
             // Printing the token and its productions (if found).
             cout << nonTerminal << "-->";
+
+            // TODO: Handle this.
             for (string p : productions)
             {
                 cout << p;
