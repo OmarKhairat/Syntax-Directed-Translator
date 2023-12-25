@@ -11,9 +11,9 @@ int main()
     // Test CFGParser
     std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
     // get keys of the map
-    std::set<std::string> non_terminals;
+    vector<std::string> non_terminals;
     for (const auto& entry : rules_map_set) {
-        non_terminals.insert(entry.first);
+        non_terminals.push_back(entry.first);
     }
 
     // print rules_map
