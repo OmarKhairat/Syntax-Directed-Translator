@@ -159,7 +159,7 @@ unordered_map<string, set<vector<string>>> CFGParser::get_maped_rules(const unor
         size_t start = 0;
         for (size_t end = 0; end < RHS.size(); end++)
         {
-            if (RHS.at(end) == "|")
+            if (RHS.at(end).compare("|") == 0)
             {
                 if (start != end)
                 {
@@ -191,7 +191,6 @@ void CFGParser::topologicalSortUtil(const string &nonterminal, const unordered_m
                 {
                     topologicalSortUtil(rhs_part, rulesMap, visited, s, nonterminals);
                 }
-
             }
         }
     }
@@ -234,15 +233,18 @@ vector<pair<string, set<vector<string>>>> CFGParser::topologicalSort(const unord
         }
     }
 
-    while(! q.empty()){
+    while (!q.empty())
+    {
         string nonterminal = q.front();
         q.pop();
-        if (visited.find(nonterminal) == visited.end()) {
+        if (visited.find(nonterminal) == visited.end())
+        {
             topologicalSortUtil(nonterminal, rulesMap, visited, s, nonterminals);
         }
     }
 
-    while (!s.empty()) {
+    while (!s.empty())
+    {
         const string &nonterminal = s.top();
         s.pop();
         sorted_rules.push_back({nonterminal, rulesMap.at(nonterminal)});
@@ -251,10 +253,150 @@ vector<pair<string, set<vector<string>>>> CFGParser::topologicalSort(const unord
     return sorted_rules;
 }
 
+unordered_map<string, set<vector<string>>> CFGParser::eleminateLeftRecursion(const unordered_map<string, set<vector<string>>> &rulesMap)
+{
+    unordered_map<string, set<vector<string>>> resultRules;
+    queue<pair<string, set<vector<string>>>> rulesQueue;
+    for (auto &rule : rulesMap)
+    {
+        rulesQueue.push(rule);
+    }
+
+    while (!rulesQueue.empty())
+    {
+        pair<string, set<vector<string>>> rule = rulesQueue.front();
+        rulesQueue.pop();
+        string nonterminal = rule.first;
+        const set<vector<string>> &originalProductions = rule.second;
+        set<vector<string>> newProductions;
+        set<vector<string>> recursiveProductions;
+
+        // Separate productions into recursive and non-recursive
+        for (const auto &production : originalProductions)
+        {
+            if (production.front().compare(nonterminal) == 0)
+            {
+                recursiveProductions.insert(production);
+            }
+            else
+            {
+                newProductions.insert(production);
+            }
+        }
+
+        if (recursiveProductions.empty())
+        {
+            // If no left recursion, keep the rule as it is
+            resultRules[nonterminal] = originalProductions;
+        }
+        else
+        {
+            // Left recursion found, eliminate it
+            string newNonterminal = nonterminal + "`";
+            set<vector<string>> nonterminalProductions;
+
+            // Create new productions for the nonterminal
+            for (const auto &production : newProductions)
+            {
+                vector<string> newProduction = production;
+                newProduction.push_back(newNonterminal);
+                nonterminalProductions.insert(newProduction);
+            }
+
+            set<vector<string>> newNonterminalProductions;
+            // Create new productions for the recursive nonterminal
+            for (const auto &production : recursiveProductions)
+            {
+                vector<string> newProduction = production;
+                newProduction.erase(newProduction.begin()); // Remove the left-recursive nonterminal
+                newProduction.push_back(newNonterminal);
+                newNonterminalProductions.insert(newProduction);
+            }
+            newNonterminalProductions.insert({"\\L"}); // Add epsilon production
+
+            rulesQueue.push(make_pair(nonterminal, nonterminalProductions));
+            rulesQueue.push(make_pair(newNonterminal, newNonterminalProductions));
+        }
+    }
+
+    return resultRules;
+}
+
+unordered_map<string, set<vector<string>>> CFGParser::LeftFactoring(const unordered_map<string, set<vector<string>>> &rulesMap)
+{
+    unordered_map<string, set<vector<string>>> resultRules;
+
+    queue<pair<string, set<vector<string>>>> rulesQueue;
+    for (auto &rule : rulesMap)
+    {
+        rulesQueue.push(rule);
+    }
+
+    while (!rulesQueue.empty())
+    {
+        pair<string, set<vector<string>>> rule = rulesQueue.front();
+        rulesQueue.pop();
+        string nonterminal = rule.first;
+        const set<vector<string>> &originalProductions = rule.second;
+        set<vector<string>> newProductions;
+
+        // Map to store common prefixes and their corresponding suffices
+        unordered_map<string, vector<vector<string>>> commonPrefixes;
+
+        // Group productions by their first symbol
+        for (const auto &production : originalProductions)
+        {
+            if (!production.empty())
+            {
+                commonPrefixes[production.at(0)].push_back(production);
+            }
+        }
+
+        // Process each group of productions
+        for (const auto &prefixGroup : commonPrefixes)
+        {
+            const vector<vector<string>> &groupProductions = prefixGroup.second;
+            int count = 0;
+
+            // If there is a common prefix, factor it out
+            if (groupProductions.size() > 1)
+            {
+                count++;
+                string newNonterminal = nonterminal + to_string(count);
+
+                // Create new productions for the nonterminal
+                vector<string> newProduction;
+                newProduction.push_back(prefixGroup.first);
+                newProduction.push_back(newNonterminal);
+                newProductions.insert(newProduction);
+
+                // Create new productions for the new nonterminal
+                set<vector<string>> newNonterminalProductions;
+                for (const auto &production : groupProductions)
+                {
+                    vector<string> newProduction = production;
+                    newProduction.erase(newProduction.begin()); // Remove the common prefix
+                    if (newProduction.empty())
+                    {
+                        newProduction.push_back("\\L");
+                    }
+                    newNonterminalProductions.insert(newProduction);
+                }
+                rulesQueue.push(make_pair(newNonterminal, newNonterminalProductions));
+            }
+            else
+            {
+                // No common prefix, add the productions as they are
+                newProductions.insert(groupProductions.begin(), groupProductions.end());
+            }
+        }
+        resultRules[nonterminal] = newProductions;
+    }
+
+    return resultRules;
+}
+
 vector<pair<string, set<vector<string>>>> CFGParser::get_CFG_rules(const string &rules_file_path)
 {
-    unordered_map<string, string> rules = get_rules_lines(rules_file_path);
-    unordered_map<string, vector<string>> rules_map = parse_rule(rules);
-    unordered_map<string, set<vector<string>>> maped_rules = get_maped_rules(rules_map);
-    return topologicalSort(maped_rules);
+    return topologicalSort(LeftFactoring(eleminateLeftRecursion(get_maped_rules(parse_rule(get_rules_lines(rules_file_path))))));
 }

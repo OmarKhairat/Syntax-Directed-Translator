@@ -6,10 +6,10 @@ using namespace std;
 
 int main()
 {
-    string projectPath = R"(C:\Users\abdel\Desktop\Connect-4\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "Test2.txt");
+    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
     // get keys of the map
     set<string> non_terminals;
     for (const auto& entry : rules_map_set) {
