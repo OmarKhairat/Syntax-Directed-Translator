@@ -48,7 +48,20 @@ int main()
         }
         std::cout << "\n\n";
     }
+      std::vector<std::pair<std::string, std::vector<std::string>>> first;
+        for (const auto& rule : rules_map_set) {
+        // Extract key
+        std::string key = rule.first;
 
+        // Find the key in First unordered_map
+        auto it = First.find(key);
+
+        // Check if key exists in First
+        if (it != First.end()) {
+            // Add a new pair to the 'first' vector
+            first.emplace_back(key, it->second);
+        }
+    }
     std::unordered_map<std::string, std::vector<std::string>> Follow = firstFollowObject.constructFollow(rules_map_set,First, non_terminals);
 
      for (const auto &entry : Follow) {
@@ -61,8 +74,28 @@ int main()
         }
         std::cout << std::endl;
     }
+   std::vector<std::pair<std::string, std::vector<std::string>>> follow;
 
+         for (const auto& rule : rules_map_set) {
+        // Extract key
+        std::string key = rule.first;
 
+        // Find the key in First unordered_map
+        auto it = Follow.find(key);
+
+        // Check if key exists in First
+        if (it != Follow.end()) {
+            // Add a new pair to the 'first' vector
+            follow.emplace_back(key, it->second);
+        }
+    }
+      for (const auto& entry : follow) {
+        std::cout << "Key: " << entry.first << ", Values: ";
+        for (const auto& value : entry.second) {
+            std::cout << value << " ";
+        }
+        std::cout << std::endl;
+    }
     /*
     LexicalAnalyzerFactory factory(projectPath);
     LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
