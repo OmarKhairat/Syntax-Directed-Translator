@@ -1,10 +1,11 @@
 #include "TopDownParser.h"
 
-TopDownParser::TopDownParser(unordered_map<string, unordered_map<string, vector<string>>> table, vector<string> nonTerminals)
+TopDownParser::TopDownParser(unordered_map<string, unordered_map<string, vector<string>>> table, vector<string> nonTerminals, LexicalAnalyzer analyzer)
 {
+    TopDownParser::analyzer = analyzer;
     TopDownParser::table = table;
-    stk.push("$");
-    stk.push(nonTerminals[0]);
+    TopDownParser::stk.push("$");
+    TopDownParser::stk.push(nonTerminals[0]);
 }
 
 vector<string> parse(stack<string> stk, queue<string> input)
@@ -19,7 +20,5 @@ vector<string> parse(stack<string> stk, queue<string> input)
 
         inputToken = input.front();
         input.pop();
-
-        
     }
 }
