@@ -12,7 +12,7 @@ TopDownParser::TopDownParser(unordered_map<string, unordered_map<string, vector<
     queue<string> input;
     while(analyzer.hasNextToken())
     {
-        input.push(analyzer.getNextToken().second);
+        input.push(analyzer.getNextToken().first);
     }
     input.push("$");
     TopDownParser::input = input;
