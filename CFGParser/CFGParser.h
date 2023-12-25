@@ -21,6 +21,8 @@ private:
     static void topologicalSortUtil(const string &nonterminal, const unordered_map<string, set<vector<string>>> &rulesMap, 
                         set<string> &visited, stack<string> &s, set<string> &nonterminals);
     static vector<pair<string, set<vector<string>>>> topologicalSort(const unordered_map<string, set<vector<string>>> &rulesMap);
+    static unordered_map<string, set<vector<string>>> eleminateLeftRecursion(const unordered_map<string, set<vector<string>>> &rulesMap);
+    static unordered_map<string, set<vector<string>>> LeftFactoring(const unordered_map<string, set<vector<string>>> &rulesMap);
 public:
     static vector<pair<string, set<vector<string>>>> get_CFG_rules(const string &rules_file_path);
 };
