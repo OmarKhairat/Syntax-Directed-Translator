@@ -131,7 +131,7 @@ vector<string> TopDownParser::parse(stack<string> stk, queue<string> input)
     }
     if(!stk.empty() || !input.empty())
     {
-        cout << "There is something wrong stack:" << stk.empty() " input: " << input.empty() << endl;
+        cout << "There is something wrong stack:" << stk.empty() << " input:" << input.empty() << endl;
     }
 
 
