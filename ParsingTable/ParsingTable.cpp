@@ -26,50 +26,55 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                               return element.first == nonTerminal;
                           });
 
+        // Check if the pair.first was found
         if (it != grammar.end())
         {
-            productions = it->second;
+            // Access the set<vector<string>> associated with the found pair
+            const auto &productions = it->second;
 
-            // Printing the token and its productions (if found).
-            cout << nonTerminal << "-->";
-            for (string p : productions)
+            // Print the results
+            cout << it->first << " --> ";
+            for (const auto &production : productions)
             {
-                cout << p;
-
-                // Check the occurence of the first element in the first set
-                // in the current production while you're at it.
-                istringstream iss(p);
-
-                string s;
-
-                iss >> s;
-
-                firstSet = mapping->second;
-
-                auto setIt = find(firstSet.begin(), firstSet.end(), s);
-                auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), s);
-
-                if (setIt != firstSet.end())
+                for (const auto &symbol : production)
                 {
-                    // If found, add it to the parsing table.
-                    table[nonTerminal][s].emplace_back(p);
-                }
-                else if (ntIt != nonTerminals.end())
-                {
-                    // If the first character in the production is a non-terminal,
-                    // assign the columns of that non-terminal to the current token in the table.
-                    for (pair<string, vector<string>> column : table[s])
+                    cout << symbol << " ";
+
+                    // Check the occurence of the first element in the first set
+                    // in the current production while you're at it.
+                    istringstream iss(symbol);
+
+                    string s;
+
+                    iss >> s;
+
+                    firstSet = mapping->second;
+
+                    auto setIt = find(firstSet.begin(), firstSet.end(), s);
+                    auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), s);
+
+                    if (setIt != firstSet.end())
                     {
-                        table[nonTerminal].insert(column);
+                        // If found, add it to the parsing table.
+                        table[nonTerminal][s].emplace_back(symbol);
+                    }
+                    else if (ntIt != nonTerminals.end())
+                    {
+                        // If the first character in the production is a non-terminal,
+                        // assign the columns of that non-terminal to the current token in the table.
+                        for (pair<string, vector<string>> column : table[s])
+                        {
+                            table[nonTerminal].insert(column);
+                        }
                     }
                 }
+                cout << "| "; // Separator between productions
             }
             cout << endl;
         }
-
         else
         {
-            cerr << "No productions found for such token" << endl;
+            cerr << "Nonterminal not found." << endl;
         }
     }
 
@@ -78,9 +83,9 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
     cout << "GENERATING THE PARSING TABLE FOLLOW SET ENTRIES" << endl;
 
     // Loop over the elements in the follow sets.
-    for (pair<string, vector<string>> mapping : followSets)
+    for (auto mapping = firstSets.end(); mapping != firstSets.begin(); --mapping)
     {
-        nonTerminal = mapping.first;
+        nonTerminal = mapping->first;
 
         // Look for the productions of the current token.
         auto it = find_if(grammar.begin(), grammar.end(),
@@ -89,39 +94,43 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                               return element.first == nonTerminal;
                           });
 
+        // Check if the pair.first was found
         if (it != grammar.end())
         {
-            productions = it->second;
+            // Access the set<vector<string>> associated with the found pair
+            const auto &productions = it->second;
 
-            // Printing the token and its productions (if found).
-            cout << nonTerminal << "-->";
+            // Print the results
+            cout << it->first << " --> ";
 
-            // TODO: Handle this.
-            for (string p : productions)
+            for (const auto &production : productions)
             {
-                cout << p;
-
-                // In this step we only care about the epsilon production.
-                // If the current token has an epsilon production, add it
-                // to the table entry of which the column index is an ele-
-                // ment in the follow set of the current non-terminal.
-
-                if (p == R"(\L)")
+                for (const auto &symbol : production)
                 {
-                    followSet = mapping.second;
+                    cout << symbol << " ";
 
-                    for (string s : followSet)
+                    // In this step we only care about the epsilon production.
+                    // If the current token has an epsilon production, add it
+                    // to the table entry of which the column index is an ele-
+                    // ment in the follow set of the current non-terminal.
+
+                    if (symbol == R"(\L)")
                     {
-                        table[nonTerminal][s].emplace_back(p);
+                        followSet = mapping->second;
+
+                        for (string s : followSet)
+                        {
+                            table[nonTerminal][s].emplace_back(symbol);
+                        }
                     }
                 }
+                cout << "| "; // Separator between productions
             }
             cout << endl;
         }
-
         else
         {
-            cerr << "No productions found for such token" << endl;
+            cerr << "Nonterminal not found." << endl;
         }
     }
 
