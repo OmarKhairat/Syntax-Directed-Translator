@@ -35,6 +35,8 @@ private:
 
     queue<string> input;
 
+    vector<string> nonTerminals;
+
     // vector<string> output;
 };
 

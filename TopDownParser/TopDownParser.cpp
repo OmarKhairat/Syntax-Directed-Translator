@@ -8,6 +8,7 @@ TopDownParser::TopDownParser(unordered_map<string, unordered_map<string, vector<
     TopDownParser::analyzer = analyzer;
     TopDownParser::table = table;
     TopDownParser::stk.push("\'$\'");
+    TopDownParser::nonTerminals = nonTerminals;
     TopDownParser::stk.push(nonTerminals[0]);
     queue<string> input;
     while(analyzer.hasNextToken())
@@ -20,12 +21,19 @@ TopDownParser::TopDownParser(unordered_map<string, unordered_map<string, vector<
 
 bool TopDownParser::isTerminal(string token)
 {
-    return token[0] == '\'' && token[token.length() - 1] == '\'' && token.length() > 2;
+    // return token[0] == '\'' && token[token.length() - 1] == '\'' && token.length() > 2;
+    for(int i = 0; i < nonTerminals.size(); i++)
+    {
+        if(nonTerminals[i].compare(token) == 0)
+            return false;
+    }
+    return true;
 }
 
 string TopDownParser::removeQuotes(string token)
 {
-    return token.substr(1, token.length() - 2);
+    // return token.substr(1, token.length() - 2);
+    return token;
 }
 
 string TopDownParser::addStackToLevel(stack<string> tokenStack, string levelStr)
