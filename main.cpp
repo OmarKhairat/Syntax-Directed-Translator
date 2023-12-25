@@ -9,9 +9,9 @@ int main()
     string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-    std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
+    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
     // get keys of the map
-    std::set<std::string> non_terminals;
+    set<string> non_terminals;
     for (const auto& entry : rules_map_set) {
         non_terminals.insert(entry.first);
     }
