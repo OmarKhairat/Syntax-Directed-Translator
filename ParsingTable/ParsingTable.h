@@ -19,12 +19,12 @@ public:
     explicit ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                           unordered_map<string, vector<string>> firsts,
                           unordered_map<string, vector<string>> follows,
-                          set<string> nonTerminals);
+                          vector<string> nonTerminals);
 
-    unordered_map<string, unordered_map<string, vector<string>>> getTable();
+    unordered_map<string, unordered_map<string, vector<vector<string>>>> getTable();
 
 private:
-    unordered_map<string, unordered_map<string, vector<string>>> table;
+    unordered_map<string, unordered_map<string, vector<vector<string>>>> table;
 };
 
 #endif // SYNTAX_DIRECTED_TRANSLATOR_PARSINGTABLE_H

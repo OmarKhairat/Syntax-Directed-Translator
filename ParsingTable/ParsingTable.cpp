@@ -3,10 +3,10 @@
 ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                            unordered_map<string, vector<string>> firstSets,
                            unordered_map<string, vector<string>> followSets,
-                           set<string> nonTerminals)
+                           vector<string> nonTerminals)
 {
     // Initialize the table, a temporary token, and a vector for productions.
-    unordered_map<string, unordered_map<string, vector<string>>> table;
+    unordered_map<string, unordered_map<string, vector<vector<string>>>> table;
     string nonTerminal;
     vector<string> firstSet;
     vector<string> followSet;
@@ -36,35 +36,37 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
             cout << it->first << " --> ";
             for (const auto &production : productions)
             {
-                for (const auto &symbol : production)
+                for (auto pIt = production.begin(); pIt < production.end(); pIt++)
                 {
+                    string symbol = *pIt;
+
                     cout << symbol << " ";
 
-                    // Check the occurence of the first element in the first set
-                    // in the current production while you're at it.
-                    istringstream iss(symbol);
-
-                    string s;
-
-                    iss >> s;
-
-                    firstSet = mapping->second;
-
-                    auto setIt = find(firstSet.begin(), firstSet.end(), s);
-                    auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), s);
-
-                    if (setIt != firstSet.end())
+                    if (pIt == production.begin())
                     {
-                        // If found, add it to the parsing table.
-                        table[nonTerminal][s].emplace_back(symbol);
-                    }
-                    else if (ntIt != nonTerminals.end())
-                    {
-                        // If the first character in the production is a non-terminal,
-                        // assign the columns of that non-terminal to the current token in the table.
-                        for (pair<string, vector<string>> column : table[s])
+                        // Check the occurence of the first element in the first set
+                        // in the current production while you're at it.
+                        firstSet = mapping->second;
+
+                        // Check if the symbol is a terminal and is in the first set.
+                        auto setIt = find(firstSet.begin(), firstSet.end(), symbol);
+
+                        // Check if the symbol is a non-terminal.
+                        auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), symbol);
+
+                        if (setIt != firstSet.end())
                         {
-                            table[nonTerminal].insert(column);
+                            // If found in the first set (terminal), add it to the parsing table.
+                            table[nonTerminal][symbol].emplace_back(production);
+                        }
+                        else if (ntIt != nonTerminals.end())
+                        {
+                            // If the first symbol in the production is a non-terminal,
+                            // assign the columns of that non-terminal to the current token in the table.
+                            for (pair<string, vector<vector<string>>> column : table[symbol])
+                            {
+                                table[nonTerminal].insert(column);
+                            }
                         }
                     }
                 }
@@ -105,23 +107,27 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
 
             for (const auto &production : productions)
             {
-                for (const auto &symbol : production)
+                string epsilon = R"(\L)";
+
+                followSet = mapping->second;
+
+                auto it = find(production.begin(), production.end(), epsilon);
+
+                if (it != production.end())
                 {
-                    cout << symbol << " ";
-
-                    // In this step we only care about the epsilon production.
-                    // If the current token has an epsilon production, add it
-                    // to the table entry of which the column index is an ele-
-                    // ment in the follow set of the current non-terminal.
-
-                    if (symbol == R"(\L)")
+                    for (string s : followSet)
                     {
-                        followSet = mapping->second;
+                        table[nonTerminal][s].emplace_back(production);
+                    }
+                }
+                else
+                {
+                    vector<string> sync;
+                    sync.emplace_back(R"(\SYNC\)");
 
-                        for (string s : followSet)
-                        {
-                            table[nonTerminal][s].emplace_back(symbol);
-                        }
+                    for (string s : followSet)
+                    {
+                        table[nonTerminal][s].emplace_back(sync);
                     }
                 }
                 cout << "| "; // Separator between productions
@@ -139,7 +145,7 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
     ParsingTable::table = table;
 }
 
-unordered_map<string, unordered_map<string, vector<string>>> ParsingTable::getTable()
+unordered_map<string, unordered_map<string, vector<vector<string>>>> ParsingTable::getTable()
 {
     return table;
 }
