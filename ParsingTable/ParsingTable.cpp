@@ -23,7 +23,7 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
         auto it = find_if(grammar.begin(), grammar.end(),
                           [nonTerminal](const auto &element)
                           {
-                              return element.first.compareTo(nonTerminal) == 0;
+                              return element.first.compare(nonTerminal) == 0;
                           });
 
         // Check if the pair.first was found
@@ -93,7 +93,7 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
         auto it = find_if(grammar.begin(), grammar.end(),
                           [nonTerminal](const auto &element)
                           {
-                              return element.first.compareTo(nonTerminal) == 0;
+                              return element.first.compare(nonTerminal) == 0;
                           });
 
         // Check if the pair.first was found
