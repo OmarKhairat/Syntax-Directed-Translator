@@ -1,0 +1,10 @@
+# S = R T
+# T = V t T
+| \L
+# R = s U R b
+| \L
+# U = u U
+| \L
+# V = v V
+| \L
+ 

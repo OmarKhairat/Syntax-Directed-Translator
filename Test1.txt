@@ -1,0 +1,6 @@
+# F = S
+# S = i C t S E
+| a
+# E = e S
+| \L
+# C = b

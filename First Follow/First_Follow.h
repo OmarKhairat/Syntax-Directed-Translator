@@ -15,7 +15,7 @@ public:
     std::unordered_map<std::string, std::vector<std::string>> constructFirst(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, const set<string> &nonTerminals);
     std::unordered_map<std::string, std::vector<std::string>> constructFollow(std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> inputMap, std::unordered_map<std::string, std::vector<std::string>> First, const set<string> &nonTerminals);
     static bool isNonTerminal(const std::string &symbol, const set<string> &nonTerminals);
-    static std::vector<std::pair<std::string, std::string>> findAllOccurrences(
+    static std::vector<std::pair<std::string, std::vector<std::string>>>  findAllOccurrences(
         const std::vector<std::pair<std::string, std::set<std::vector<std::string>>>> &inputMap,
         const std::string &key);
 };
