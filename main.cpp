@@ -21,9 +21,6 @@ int main()
     {
         non_terminals.insert(entry.first);
         NTs.push_back(entry.first);
-    vector<std::string> non_terminals;
-    for (const auto& entry : rules_map_set) {
-        non_terminals.push_back(entry.first);
     }
 
     // print rules_map
@@ -111,7 +108,9 @@ int main()
         }
     }
 
-    cout << endl << endl << "=== FIRST ===" << endl;
+    cout << endl
+         << endl
+         << "=== FIRST ===" << endl;
     for (const auto &entry : first)
     {
         std::cout << "Key: " << entry.first << ", Values: ";
@@ -122,7 +121,9 @@ int main()
         std::cout << std::endl;
     }
 
-    cout << endl << endl << "=== FOLLOW ===" << endl;
+    cout << endl
+         << endl
+         << "=== FOLLOW ===" << endl;
 
     for (const auto &entry : follow)
     {
