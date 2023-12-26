@@ -1,12 +1,14 @@
 #include "ParsingTable.h"
 
+using namespace std;
+
 ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
-                           unordered_map<string, vector<string>> firstSets,
-                           unordered_map<string, vector<string>> followSets,
+                           vector<pair<string, vector<string>>> firstSets,
+                           vector<pair<string, vector<string>>> followSets,
                            vector<string> nonTerminals)
 {
     // Initialize the table, a temporary token, and a vector for productions.
-    unordered_map<string, unordered_map<string, vector<vector<string>>>> table;
+    unordered_map<string, unordered_map<string, vector<vector<string>>>> constructedTable;
     string nonTerminal;
     vector<string> firstSet;
     vector<string> followSet;
@@ -15,15 +17,17 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
     cout << "GENERATING THE PARSING TABLE FIRST SET ENTRIES" << endl;
 
     // Loop over the elements in the first sets.
-    for (auto mapping = firstSets.end(); mapping != firstSets.begin(); --mapping)
+    for (int i = 0; i < firstSets.size(); ++i)
     {
-        nonTerminal = mapping->first;
+        pair<string, vector<string>> mapping = firstSets[i];
+
+        nonTerminal = mapping.first;
 
         // Look for the productions of the current token.
         auto it = find_if(grammar.begin(), grammar.end(),
                           [nonTerminal](const auto &element)
                           {
-                              return element.first.compareTo(nonTerminal) == 0;
+                              return element.first.compare(nonTerminal) == 0;
                           });
 
         // Check if the pair.first was found
@@ -46,26 +50,19 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                     {
                         // Check the occurence of the first element in the first set
                         // in the current production while you're at it.
-                        firstSet = mapping->second;
+                        firstSet = mapping.second;
 
                         // Check if the symbol is a terminal and is in the first set.
                         auto setIt = find(firstSet.begin(), firstSet.end(), symbol);
 
-                        // Check if the symbol is a non-terminal.
-                        auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), symbol);
-
                         if (setIt != firstSet.end())
                         {
                             // If found in the first set (terminal), add it to the parsing table.
-                            table[nonTerminal][symbol].emplace_back(production);
-                        }
-                        else if (ntIt != nonTerminals.end())
-                        {
-                            // If the first symbol in the production is a non-terminal,
-                            // assign the columns of that non-terminal to the current token in the table.
-                            for (pair<string, vector<vector<string>>> column : table[symbol])
                             {
-                                table[nonTerminal].insert(column);
+                                if (symbol.compare(R"(\L)"))
+                                {
+                                    constructedTable[nonTerminal][symbol].emplace_back(production);
+                                }
                             }
                         }
                     }
@@ -76,7 +73,7 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
         }
         else
         {
-            cerr << "Nonterminal not found." << endl;
+            cout << "Nonterminal not found." << endl;
         }
     }
 
@@ -84,16 +81,20 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
 
     cout << "GENERATING THE PARSING TABLE FOLLOW SET ENTRIES" << endl;
 
+    ofstream op("op.txt");
+
     // Loop over the elements in the follow sets.
-    for (auto mapping = firstSets.end(); mapping != firstSets.begin(); --mapping)
+    for (int i = followSets.size() - 1; i > -1; --i)
     {
-        nonTerminal = mapping->first;
+        pair<string, vector<string>> mapping = followSets[i];
+
+        nonTerminal = mapping.first;
 
         // Look for the productions of the current token.
         auto it = find_if(grammar.begin(), grammar.end(),
                           [nonTerminal](const auto &element)
                           {
-                              return element.first.compareTo(nonTerminal) == 0;
+                              return element.first.compare(nonTerminal) == 0;
                           });
 
         // Check if the pair.first was found
@@ -107,27 +108,61 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
 
             for (const auto &production : productions)
             {
+                for (const auto &symbol : production)
+                {
+                    cout << symbol << " ";
+                }
+
+                followSet = mapping.second;
+
                 string epsilon = R"(\L)";
 
-                followSet = mapping->second;
+                // Check if the first symbol in the production is a non-terminal.
+                string firstToken = production[0];
 
-                auto it = find(production.begin(), production.end(), epsilon);
+                auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), firstToken);
 
-                if (it != production.end())
+                // Check if the production is an epsilon.
+                auto epsIt = find(production.begin(), production.end(), epsilon);
+
+                if (epsIt != production.end())
                 {
+                    // If the production is an epsilon.
                     for (string s : followSet)
                     {
-                        table[nonTerminal][s].emplace_back(production);
+                        if (s.compare("") != 0)
+                        {
+                            constructedTable[nonTerminal][s].emplace_back(production);
+                        }
                     }
                 }
-                else
+                else if (ntIt == production.end())
                 {
+                    // If the production is not an epsilon.
                     vector<string> sync;
                     sync.emplace_back(R"(\SYNC\)");
 
                     for (string s : followSet)
                     {
-                        table[nonTerminal][s].emplace_back(sync);
+                        constructedTable[nonTerminal][s].emplace_back(sync);
+                    }
+                }
+                else
+                {
+                    // If the productions begins with a non-terminal,
+                    // add the entries of the first set of that non-terminal
+                    // to the current non-terminal entries in the table.
+                    auto mapping = find_if(firstSets.begin(), firstSets.end(),
+                                           [firstToken](const auto &element)
+                                           {
+                                               return element.first.compare(firstToken) == 0;
+                                           });
+
+                    auto firstSet = mapping->second;
+
+                    for (string s : firstSet)
+                    {
+                        constructedTable[nonTerminal][s].emplace_back(production);
                     }
                 }
                 cout << "| "; // Separator between productions
@@ -136,13 +171,13 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
         }
         else
         {
-            cerr << "Nonterminal not found." << endl;
+            cout << "Nonterminal not found." << endl;
         }
     }
 
     cout << "FOLLOW SET ENTRIES COMPLETE" << endl;
 
-    ParsingTable::table = table;
+    ParsingTable::table = constructedTable;
 }
 
 unordered_map<string, unordered_map<string, vector<vector<string>>>> ParsingTable::getTable()

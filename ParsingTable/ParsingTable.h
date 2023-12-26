@@ -17,8 +17,8 @@ class ParsingTable
 {
 public:
     explicit ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
-                          unordered_map<string, vector<string>> firsts,
-                          unordered_map<string, vector<string>> follows,
+                          vector<pair<string, vector<string>>> firstSets,
+                          vector<pair<string, vector<string>>> followSets,
                           vector<string> nonTerminals);
 
     unordered_map<string, unordered_map<string, vector<vector<string>>>> getTable();

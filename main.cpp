@@ -1,19 +1,26 @@
 #include "LexicalAnalyzer/LexicalAnalyzer.h"
 #include "CFGParser/CFGParser.h"
 #include <sstream>
-#include "First Follow/First_Follow.h"
+#include "FirstFollow/First_Follow.h"
+#include "ParsingTable/ParsingTable.h"
+
 using namespace std;
 
 int main()
 {
-    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
+    // string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
+    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules2.txt");
     // get keys of the map
     set<string> non_terminals;
-    for (const auto& entry : rules_map_set) {
+    vector<string> NTs;
+
+    for (const auto &entry : rules_map_set)
+    {
         non_terminals.insert(entry.first);
+        NTs.push_back(entry.first);
     }
 
     // print rules_map
@@ -27,9 +34,11 @@ int main()
             {
                 cout << rhs_part << " ";
             }
-            if(i != rule.second.size() - 1)
-                cout << endl << "\t| ";
-            else{
+            if (i != rule.second.size() - 1)
+                cout << endl
+                     << "\t| ";
+            else
+            {
                 cout << endl;
             }
             i++;
@@ -38,18 +47,21 @@ int main()
 
     First_Follow firstFollowObject;
     std::unordered_map<std::string, std::vector<std::string>> First = firstFollowObject.constructFirst(rules_map_set, non_terminals);
-    for (const auto &entry : First) {
+    for (const auto &entry : First)
+    {
         const std::string &key = entry.first;
         const std::vector<std::string> &value = entry.second;
 
         std::cout << "Key: " << key << "\nValues:";
-        for (const std::string &str : value) {
+        for (const std::string &str : value)
+        {
             std::cout << " " << str;
         }
         std::cout << "\n\n";
     }
-      std::vector<std::pair<std::string, std::vector<std::string>>> first;
-        for (const auto& rule : rules_map_set) {
+    std::vector<std::pair<std::string, std::vector<std::string>>> first;
+    for (const auto &rule : rules_map_set)
+    {
         // Extract key
         std::string key = rule.first;
 
@@ -57,26 +69,31 @@ int main()
         auto it = First.find(key);
 
         // Check if key exists in First
-        if (it != First.end()) {
+        if (it != First.end())
+        {
             // Add a new pair to the 'first' vector
             first.emplace_back(key, it->second);
         }
     }
-    std::unordered_map<std::string, std::vector<std::string>> Follow = firstFollowObject.constructFollow(rules_map_set,First, non_terminals);
+    std::unordered_map<std::string, std::vector<std::string>> Follow = firstFollowObject.constructFollow(rules_map_set, First, non_terminals);
 
-     for (const auto &entry : Follow) {
+    for (const auto &entry : Follow)
+    {
         const std::string &key = entry.first;
         const std::vector<std::string> &values = entry.second;
 
         std::cout << "Key: " << key << ", Values: ";
-        for (const auto &value : values) {
+        for (const auto &value : values)
+        {
             std::cout << value << " ";
         }
         std::cout << std::endl;
     }
-   std::vector<std::pair<std::string, std::vector<std::string>>> follow;
 
-         for (const auto& rule : rules_map_set) {
+    std::vector<std::pair<std::string, std::vector<std::string>>> follow;
+
+    for (const auto &rule : rules_map_set)
+    {
         // Extract key
         std::string key = rule.first;
 
@@ -84,18 +101,86 @@ int main()
         auto it = Follow.find(key);
 
         // Check if key exists in First
-        if (it != Follow.end()) {
+        if (it != Follow.end())
+        {
             // Add a new pair to the 'first' vector
             follow.emplace_back(key, it->second);
         }
     }
-      for (const auto& entry : follow) {
+
+    cout << endl << endl << "=== FIRST ===" << endl;
+    for (const auto &entry : first)
+    {
         std::cout << "Key: " << entry.first << ", Values: ";
-        for (const auto& value : entry.second) {
+        for (const auto &value : entry.second)
+        {
             std::cout << value << " ";
         }
         std::cout << std::endl;
     }
+
+    cout << endl << endl << "=== FOLLOW ===" << endl;
+
+    for (const auto &entry : follow)
+    {
+        std::cout << "Key: " << entry.first << ", Values: ";
+        for (const auto &value : entry.second)
+        {
+            std::cout << value << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    cout << endl
+         << endl;
+
+    ParsingTable pt(rules_map_set, first, follow, NTs);
+
+    unordered_map<string, unordered_map<string, vector<vector<string>>>> table = pt.getTable();
+
+    vector<pair<string, unordered_map<string, vector<vector<string>>>>> sortedTable;
+
+    for (const auto &rule : rules_map_set)
+    {
+        // Extract key
+        string key = rule.first;
+
+        // Find the key in the table
+        auto it = table.find(key);
+
+        // Check if key exists in First
+        if (it != table.end())
+        {
+            // Add a new pair to the 'first' vector
+            sortedTable.emplace_back(*it);
+        }
+    }
+
+    cout << endl;
+
+    // Print the elements of the sortedTable
+    for (const auto &outerPair : sortedTable)
+    {
+        cout << "Key: " << outerPair.first << endl;
+
+        for (const auto &innerPair : outerPair.second)
+        {
+            cout << "  Token: " << innerPair.first << endl;
+
+            for (const auto &innerVector : innerPair.second)
+            {
+                cout << "    Productions: ";
+
+                for (const auto &str : innerVector)
+                {
+                    std::cout << str << " ";
+                }
+
+                std::cout << std::endl;
+            }
+        }
+    }
+
     /*
     LexicalAnalyzerFactory factory(projectPath);
     LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
