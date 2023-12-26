@@ -17,4 +17,8 @@ add_executable(Syntax_Directed_Translator
         FirstFollow/First_Follow.cpp
         ParsingTable/ParsingTable.h
         ParsingTable/ParsingTable.cpp
+        LexicalAnalyzer/LexicalAnalyzer.h
+        LexicalAnalyzer/LexicalAnalyzer.cpp
+        TopDownParser/TopDownParser.h
+        TopDownParser/TopDownParser.cpp
         )
