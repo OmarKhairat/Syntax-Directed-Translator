@@ -1,8 +1,9 @@
-#include "LexicalAnalyzer/LexicalAnalyzer.h"
 #include "CFGParser/CFGParser.h"
 #include <sstream>
 #include "FirstFollow/First_Follow.h"
 #include "ParsingTable/ParsingTable.h"
+#include "TopDownParser/TopDownParser.h"
+#include "LexicalAnalyzer\LexicalAnalyzer.h"
 
 using namespace std;
 
@@ -12,7 +13,7 @@ int main()
     string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules2.txt");
+    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
     // get keys of the map
     set<string> non_terminals;
     vector<string> NTs;
@@ -184,6 +185,41 @@ int main()
             }
         }
     }
+
+    cout << endl;
+
+    /* Preparing the inputs for the top down parser. */
+    auto it = find(NTs.begin(), NTs.end(), R"(\L)");
+
+    if (it != NTs.end())
+    {
+        NTs.erase(it);
+    }
+
+    LexicalAnalyzerFactory factory(projectPath);
+    LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
+
+    string testProgram = "int x;\n"
+                         "x = 5\n"
+                         "if (x > 2)\n"
+                         "{\n"
+                         "\t x = 0\n"
+                         "}\n";
+
+    lexicalAnalyzer.setExpression(testProgram);
+
+    TopDownParser tdp(table, NTs, lexicalAnalyzer);
+
+    ofstream ofs("tdp_out.txt");
+
+    vector<string> output = tdp.parse();
+
+    for (string o : output)
+    {
+        ofs << o << endl;
+    }
+
+    ofs.close();
 
     /*
     LexicalAnalyzerFactory factory(projectPath);
