@@ -21,9 +21,6 @@ int main()
     {
         non_terminals.insert(entry.first);
         NTs.push_back(entry.first);
-    vector<std::string> non_terminals;
-    for (const auto& entry : rules_map_set) {
-        non_terminals.push_back(entry.first);
     }
 
     // print rules_map
