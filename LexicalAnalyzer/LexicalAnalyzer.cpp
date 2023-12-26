@@ -3,7 +3,8 @@ using namespace std;
 
 // Implementation of LexicalAnalyzer
 LexicalAnalyzer::LexicalAnalyzer(PatternMatcher thePatternMatcher)
-    : patternMatcher(thePatternMatcher), counter(0) {
+    : patternMatcher(thePatternMatcher), counter(0)
+{
 }
 
 void LexicalAnalyzer::setExpression(string expression)

@@ -12,7 +12,6 @@ using namespace std;
 class LexicalAnalyzer
 {
 public:
-    explicit LexicalAnalyzer();
     explicit LexicalAnalyzer(PatternMatcher thePatternMatcher);
     void setExpression(string expression);
     pair<string, string> getNextToken();
