@@ -47,3 +47,5 @@ build/
 cmake-build-debug/
 bin/
 debug/
+Outputs/dfa_states_output.txt
+Outputs/dfa_states_output2.txt
