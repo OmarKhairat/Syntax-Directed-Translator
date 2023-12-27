@@ -73,7 +73,7 @@ bool is_special_char(char c)
     return res;
 }
 
-unordered_map<string, vector<string>> CFGParser::split_RHS(const unordered_map<string, string> &rule_lines)
+unordered_map<string, vector<string>> CFGParser::parse_rule(const unordered_map<string, string> &rule_lines)
 {
     unordered_map<string, vector<string>> rules;
     for (auto &rule : rule_lines)
@@ -148,7 +148,7 @@ unordered_map<string, vector<string>> CFGParser::split_RHS(const unordered_map<s
     return rules;
 }
 
-unordered_map<string, set<vector<string>>> CFGParser::split_by_or(const unordered_map<string, vector<string>> &rules)
+unordered_map<string, set<vector<string>>> CFGParser::get_maped_rules(const unordered_map<string, vector<string>> &rules)
 {
     unordered_map<string, set<vector<string>>> maped_rules;
     for (auto &rule : rules)
@@ -177,8 +177,8 @@ unordered_map<string, set<vector<string>>> CFGParser::split_by_or(const unordere
     return maped_rules;
 }
 
-void CFGParser::topological_sort_util(const string &nonterminal, const unordered_map<string, set<vector<string>>> &rulesMap,
-                                      set<string> &visited, stack<string> &s, set<string> &nonterminals)
+void CFGParser::topologicalSortUtil(const string &nonterminal, const unordered_map<string, set<vector<string>>> &rulesMap,
+                                    set<string> &visited, stack<string> &s, set<string> &nonterminals)
 {
     visited.insert(nonterminal);
     for (auto &rhs : rulesMap.at(nonterminal))
@@ -189,7 +189,7 @@ void CFGParser::topological_sort_util(const string &nonterminal, const unordered
             {
                 if (visited.find(rhs_part) == visited.end() && nonterminals.find(rhs_part) != nonterminals.end())
                 {
-                    topological_sort_util(rhs_part, rulesMap, visited, s, nonterminals);
+                    topologicalSortUtil(rhs_part, rulesMap, visited, s, nonterminals);
                 }
             }
         }
@@ -197,7 +197,7 @@ void CFGParser::topological_sort_util(const string &nonterminal, const unordered
     s.push(nonterminal);
 }
 
-vector<pair<string, set<vector<string>>>> CFGParser::topological_sort(const unordered_map<string, set<vector<string>>> &rulesMap)
+vector<pair<string, set<vector<string>>>> CFGParser::topologicalSort(const unordered_map<string, set<vector<string>>> &rulesMap)
 {
     vector<pair<string, set<vector<string>>>> sorted_rules;
     unordered_map<string, int> in_degree;
@@ -239,7 +239,7 @@ vector<pair<string, set<vector<string>>>> CFGParser::topological_sort(const unor
         q.pop();
         if (visited.find(nonterminal) == visited.end())
         {
-            topological_sort_util(nonterminal, rulesMap, visited, s, nonterminals);
+            topologicalSortUtil(nonterminal, rulesMap, visited, s, nonterminals);
         }
     }
 
@@ -253,7 +253,7 @@ vector<pair<string, set<vector<string>>>> CFGParser::topological_sort(const unor
     return sorted_rules;
 }
 
-unordered_map<string, set<vector<string>>> CFGParser::eleminate_left_rec(const unordered_map<string, set<vector<string>>> &rulesMap)
+unordered_map<string, set<vector<string>>> CFGParser::eleminateLeftRecursion(const unordered_map<string, set<vector<string>>> &rulesMap)
 {
     unordered_map<string, set<vector<string>>> resultRules;
     queue<pair<string, set<vector<string>>>> rulesQueue;
@@ -322,7 +322,7 @@ unordered_map<string, set<vector<string>>> CFGParser::eleminate_left_rec(const u
     return resultRules;
 }
 
-unordered_map<string, set<vector<string>>> CFGParser::Left_fact(const unordered_map<string, set<vector<string>>> &rulesMap)
+unordered_map<string, set<vector<string>>> CFGParser::LeftFactoring(const unordered_map<string, set<vector<string>>> &rulesMap)
 {
     unordered_map<string, set<vector<string>>> resultRules;
 
@@ -398,5 +398,5 @@ unordered_map<string, set<vector<string>>> CFGParser::Left_fact(const unordered_
 
 vector<pair<string, set<vector<string>>>> CFGParser::get_CFG_rules(const string &rules_file_path)
 {
-    return topological_sort(Left_fact(eleminate_left_rec(split_by_or(split_RHS(get_rules_lines(rules_file_path))))));
+    return topologicalSort(LeftFactoring(eleminateLeftRecursion(get_maped_rules(parse_rule(get_rules_lines(rules_file_path))))));
 }
