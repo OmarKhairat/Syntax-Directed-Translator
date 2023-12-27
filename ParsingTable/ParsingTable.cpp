@@ -20,8 +20,8 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
     for (int i = 0; i < firstSets.size(); ++i)
     {
         pair<string, vector<string>> mapping = firstSets[i];
-
         nonTerminal = mapping.first;
+        firstSet = mapping.second;
 
         // Look for the productions of the current token.
         auto it = find_if(grammar.begin(), grammar.end(),
@@ -50,23 +50,36 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                     {
                         // Check the occurence of the first element in the first set
                         // in the current production while you're at it.
-                        firstSet = mapping.second;
 
                         // Check if the symbol is a terminal and is in the first set.
                         auto setIt = find(firstSet.begin(), firstSet.end(), symbol);
 
-                        if (setIt != firstSet.end())
+                        if (setIt != firstSet.end() && symbol.compare(R"(\L)") != 0)
                         {
-                            // If found in the first set (terminal), add it to the parsing table.
-                            {
-                                if (symbol.compare(R"(\L)"))
-                                {
-                                    constructedTable[nonTerminal][symbol].emplace_back(production);
+                            // If found in the first set (terminal), add its corresponding production to the parsing table.
+                            constructedTable[nonTerminal][symbol].emplace_back(production);
+                        }
+                        else
+                        {
+                            // The symbol is non-terminal. Get its first set and add its corresponding production to the first set.
+                            auto ntSetIt = find_if(firstSets.begin(), firstSets.end(),
+                                                   [symbol](const auto &element)
+                                                   {
+                                                       return element.first.compare(symbol) == 0;
+                                                   });
 
-                                    if (constructedTable[nonTerminal][symbol].size() > 1)
+                            if (ntSetIt != firstSets.end())
+                            {
+                                // If found the first set of the non-terminal,
+                                // add the current production to each entry in that set.
+                                for (string s : ntSetIt->second)
+                                {
+                                    auto findCurrentToken = find(firstSet.begin(), firstSet.end(), s);
+
+                                    // Add the production only to the intersection between the two firstSets.
+                                    if (findCurrentToken != firstSet.end())
                                     {
-                                        cout << "ERROR: ENCOUNTERED AMBIGUITY" << endl;
-                                        exit(-1);
+                                        constructedTable[nonTerminal][s].emplace_back(production);
                                     }
                                 }
                             }
@@ -138,23 +151,12 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                     {
                         if (s.compare("") != 0)
                         {
-                            cout << endl
-                                 << "EPS" << endl;
                             constructedTable[nonTerminal][s].emplace_back(production);
-
-                            if (constructedTable[nonTerminal][s].size() > 1)
-                            {
-                                cout << "ERROR: ENCOUNTERED AMBIGUITY" << endl;
-                                exit(-1);
-                            }
                         }
                     }
                 }
                 else if (ntIt == production.end())
                 {
-                    cout << endl
-                         << "SYNC" << endl;
-
                     // If the production is not an epsilon.
                     vector<string> sync;
                     sync.emplace_back(R"(\SYNC\)");
@@ -162,52 +164,8 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                     for (string s : followSet)
                     {
                         constructedTable[nonTerminal][s].emplace_back(sync);
-                        if (constructedTable[nonTerminal][s].size() > 1)
-                        {
-                            cout << "ERROR: ENCOUNTERED AMBIGUITY" << endl;
-                            exit(-1);
-                        }
                     }
                 }
-                else
-                {
-                    cout << endl
-                         << "NON TERMINAL" << endl;
-
-                    // If the productions begins with a non-terminal,
-                    // add the entries of the first set of that non-terminal
-                    // to the current non-terminal entries in the table.
-                    auto mapping = find_if(firstSets.begin(), firstSets.end(),
-                                           [firstToken](const auto &element)
-                                           {
-                                               return element.first.compare(firstToken) == 0;
-                                           });
-
-                    if (mapping != firstSets.end())
-                    {
-                        auto firstSet = mapping->second;
-                    }
-
-                    else
-                    {
-                        goto CONTINUATION;
-                    }
-
-                    cout << "BEFORE LOOP" << endl;
-
-                    for (string s : firstSet)
-                    {
-                        constructedTable[nonTerminal][s].emplace_back(production);
-
-                        if (constructedTable[nonTerminal][s].size() > 1)
-                        {
-                            cout << "ERROR: ENCOUNTERED AMBIGUITY" << endl;
-                            exit(-1);
-                        }
-                    }
-                }
-
-            CONTINUATION:
                 cout << "| "; // Separator between productions
             }
             cout << endl;
