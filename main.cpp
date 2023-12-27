@@ -163,6 +163,19 @@ int main()
 
     cout << endl;
 
+    // Check the ambiguity of the sortedTable.
+    for (const auto &outerPair : sortedTable)
+    {
+        for (const auto &innerPair : outerPair.second)
+        {
+            if (innerPair.second.size() > 1)
+            {
+                cout << "ENCOUNTERED AMBIGUITY! EXITING..." << endl;
+                exit(-1);
+            }
+        }
+    }
+
     // Print the elements of the sortedTable
     for (const auto &outerPair : sortedTable)
     {
@@ -200,10 +213,10 @@ int main()
     LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
 
     string testProgram = "int x;\n"
-                         "x = 5\n"
+                         "x = 5;\n"
                          "if (x > 2)\n"
                          "{\n"
-                         "\t x = 0\n"
+                         "\t x = 0;\n"
                          "}\n";
 
     lexicalAnalyzer.setExpression(testProgram);
