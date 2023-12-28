@@ -25,8 +25,6 @@ public:
 
     bool isTerminal(string token);
 
-    string removeQuotes(string token);
-
     string addStackToLevel(stack<string> tokenStack, string levelStr);
 
     stack<string> addProductionRuleToStack(stack<string> tokenStack, vector<string> productionRule);
