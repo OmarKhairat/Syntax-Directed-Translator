@@ -1,0 +1,223 @@
+Key: METHOD_BODY
+  Token: $
+    Productions: \SYNC\
+  Token: while
+    Productions: STATEMENT_LIST
+  Token: float
+    Productions: STATEMENT_LIST
+  Token: id
+    Productions: STATEMENT_LIST
+  Token: int
+    Productions: STATEMENT_LIST
+  Token: if
+    Productions: STATEMENT_LIST
+Key: STATEMENT_LIST
+  Token: $
+    Productions: \SYNC\
+  Token: while
+    Productions: STATEMENT STATEMENT_LIST` 
+  Token: float
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: id
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: int
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: if
+    Productions: STATEMENT STATEMENT_LIST`
+Key: STATEMENT_LIST`
+  Token: $
+    Productions: \L
+  Token: while
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: float
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: id
+    Productions: STATEMENT STATEMENT_LIST`
+  Token: int
+    Productions: STATEMENT STATEMENT_LIST` 
+  Token: if
+    Productions: STATEMENT STATEMENT_LIST`
+Key: STATEMENT
+  Token: }
+    Productions: \SYNC\
+  Token: $
+    Productions: \SYNC\
+  Token: while
+    Productions: WHILE
+  Token: float
+    Productions: DECLARATION
+  Token: id
+    Productions: ASSIGNMENT
+  Token: int
+    Productions: DECLARATION
+  Token: if
+    Productions: IF
+Key: WHILE
+  Token: }
+    Productions: \SYNC\
+  Token: if
+    Productions: \SYNC\
+  Token: while
+    Productions: while ( EXPRESSION ) { STATEMENT }
+  Token: $
+    Productions: \SYNC\
+  Token: float
+    Productions: \SYNC\
+  Token: int
+    Productions: \SYNC\
+  Token: id
+    Productions: \SYNC\
+Key: IF
+  Token: }
+    Productions: \SYNC\
+  Token: while
+    Productions: \SYNC\
+  Token: if
+    Productions: if ( EXPRESSION ) { STATEMENT } 
+  Token: $
+    Productions: \SYNC\
+  Token: float
+    Productions: \SYNC\
+  Token: int
+    Productions: \SYNC\
+  Token: id
+    Productions: \SYNC\
+Key: DECLARATION
+  Token: }
+    Productions: \SYNC\
+  Token: while
+    Productions: \SYNC\
+  Token: if
+    Productions: \SYNC\
+  Token: float
+    Productions: PRIMITIVE_TYPE id ;
+  Token: id
+    Productions: \SYNC\
+  Token: int
+    Productions: PRIMITIVE_TYPE id ; 
+  Token: $
+    Productions: \SYNC\
+Key: PRIMITIVE_TYPE
+  Token: int
+    Productions: int
+  Token: id
+    Productions: \SYNC\
+  Token: float
+    Productions: float
+Key: ASSIGNMENT
+  Token: }
+    Productions: \SYNC\
+  Token: while
+    Productions: \SYNC\
+  Token: int
+    Productions: \SYNC\
+  Token: id
+    Productions: id = EXPRESSION ;
+  Token: float
+    Productions: \SYNC\
+  Token: $
+    Productions: \SYNC\
+  Token: if
+    Productions: \SYNC\
+Key: EXPRESSION
+  Token: ;
+    Productions: \SYNC\
+  Token: +
+    Productions: SIMPLE_EXPRESSION EXPRESSION1
+  Token: num
+    Productions: SIMPLE_EXPRESSION EXPRESSION1
+  Token: -
+    Productions: SIMPLE_EXPRESSION EXPRESSION1
+  Token: )
+    Productions: \SYNC\
+  Token: (
+    Productions: SIMPLE_EXPRESSION EXPRESSION1
+  Token: id
+    Productions: SIMPLE_EXPRESSION EXPRESSION1
+Key: EXPRESSION1
+  Token: )
+    Productions: \L
+  Token: ;
+    Productions: \L
+  Token: relop
+    Productions: relop SIMPLE_EXPRESSION
+Key: SIMPLE_EXPRESSION
+  Token: relop
+    Productions: \SYNC\
+  Token: ;
+    Productions: \SYNC\
+  Token: +
+    Productions: SIGN TERM SIMPLE_EXPRESSION`
+  Token: num
+    Productions: TERM SIMPLE_EXPRESSION`
+  Token: -
+    Productions: SIGN TERM SIMPLE_EXPRESSION`
+  Token: )
+    Productions: \SYNC\
+  Token: (
+    Productions: TERM SIMPLE_EXPRESSION`
+  Token: id
+    Productions: TERM SIMPLE_EXPRESSION`
+Key: SIMPLE_EXPRESSION`
+  Token: relop
+    Productions: \L
+  Token: ;
+    Productions: \L
+  Token: )
+    Productions: \L
+  Token: addop
+    Productions: addop TERM SIMPLE_EXPRESSION`
+Key: TERM
+  Token: relop
+    Productions: \SYNC\
+  Token: ;
+    Productions: \SYNC\
+  Token: id
+    Productions: FACTOR TERM`
+  Token: num
+    Productions: FACTOR TERM`
+  Token: addop
+    Productions: \SYNC\
+  Token: (
+    Productions: FACTOR TERM`
+  Token: )
+    Productions: \SYNC\
+Key: TERM`
+  Token: relop
+    Productions: \L
+  Token: mulop
+    Productions: mulop FACTOR TERM`
+  Token: ;
+    Productions: \L
+  Token: )
+    Productions: \L
+  Token: addop
+    Productions: \L
+Key: FACTOR
+  Token: relop
+    Productions: \SYNC\ 
+  Token: mulop
+    Productions: \SYNC\
+  Token: ;
+    Productions: \SYNC\
+  Token: id
+    Productions: id
+  Token: num
+    Productions: num
+  Token: addop
+    Productions: \SYNC\
+  Token: (
+    Productions: ( EXPRESSION )
+  Token: )
+    Productions: \SYNC\
+Key: SIGN
+  Token: +
+    Productions: +
+  Token: num
+    Productions: \SYNC\
+  Token: -
+    Productions: -
+  Token: (
+    Productions: \SYNC\
+  Token: id
+    Productions: \SYNC\

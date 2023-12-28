@@ -3,6 +3,8 @@ import csv
 # Read parsing information from the text file
 parsing_info = {}
 current_key = None
+tokens = ['while', 'if', 'int', 'float', 'id', 'num', 'relop', 'addop', 'mulop',';' ,'(',')', '-', '+', '$']
+
 
 """
 Key: METHOD_BODY
@@ -31,7 +33,6 @@ with open('parsing table.txt', 'r') as file:
             parsing_info[current_key][current_token] = productions
 
 # Extract unique tokens and keys
-tokens = set(token for productions in parsing_info.values() for token in productions)
 keys = list(parsing_info.keys())
 
 # Create CSV file and write parsing table
