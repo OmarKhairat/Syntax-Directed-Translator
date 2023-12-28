@@ -100,8 +100,6 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
 
     cout << "GENERATING THE PARSING TABLE FOLLOW SET ENTRIES" << endl;
 
-    ofstream op("op.txt");
-
     // Loop over the elements in the follow sets.
     for (int i = followSets.size() - 1; i > -1; --i)
     {
