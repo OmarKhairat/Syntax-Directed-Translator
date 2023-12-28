@@ -10,10 +10,11 @@ using namespace std;
 int main()
 {
     // string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
-    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
 
     // Test CFGParser
-    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
+    vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_Rules.txt");
+
     // get keys of the map
     set<string> non_terminals;
     vector<string> NTs;
@@ -161,10 +162,9 @@ int main()
 
                 for (const auto &str : innerVector)
                 {
-                    std::cout << str << " ";
+                    cout << str << " ";
                 }
-
-                std::cout << std::endl;
+                cout << endl;
             }
         }
     }
@@ -193,16 +193,7 @@ int main()
 
     TopDownParser tdp(table, NTs, lexicalAnalyzer);
 
-    ofstream ofs("tdp_out.txt");
-
     vector<string> output = tdp.parse();
-
-    for (string o : output)
-    {
-        ofs << o << endl;
-    }
-
-    ofs.close();
 
     return 0;
 }
