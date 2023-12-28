@@ -123,6 +123,8 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
             // Print the results
             cout << it->first << " --> ";
 
+            bool flag = true;
+
             for (const auto &production : productions)
             {
                 for (const auto &symbol : production)
@@ -137,8 +139,6 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                 // Check if the first symbol in the production is a non-terminal.
                 string firstToken = production[0];
 
-                auto ntIt = find(nonTerminals.begin(), nonTerminals.end(), firstToken);
-
                 // Check if the production is an epsilon.
                 auto epsIt = find(production.begin(), production.end(), epsilon);
 
@@ -152,21 +152,27 @@ ParsingTable::ParsingTable(vector<pair<string, set<vector<string>>>> grammar,
                             constructedTable[nonTerminal][s].emplace_back(production);
                         }
                     }
-                }
-                else if (ntIt == production.end())
-                {
-                    // If the production is not an epsilon.
-                    vector<string> sync;
-                    sync.emplace_back(R"(\SYNC\)");
 
-                    for (string s : followSet)
-                    {
-                        constructedTable[nonTerminal][s].emplace_back(sync);
-                    }
+                    flag = false;
                 }
                 cout << "| "; // Separator between productions
             }
             cout << endl;
+
+            if (flag)
+            {
+                // If the production is not an epsilon.
+                vector<string> sync;
+                sync.emplace_back(R"(\SYNC\)");
+
+                for (string s : followSet)
+                {
+                    if (s.compare("") != 0 && constructedTable[nonTerminal][s].empty())
+                    {
+                        constructedTable[nonTerminal][s].emplace_back(sync);
+                    }
+                }
+            }
         }
         else
         {
