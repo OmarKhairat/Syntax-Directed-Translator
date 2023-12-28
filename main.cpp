@@ -10,7 +10,7 @@ using namespace std;
 int main()
 {
     // string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
-    string projectPath = R"(D:\Development Workshop\Syntax-Directed-Translator\)";
+    string projectPath = R"(D:\E\Collage\Year_4_1\Compilers\Project\Syntax-Directed-Translator\)";
 
     // Test CFGParser
     vector<pair<string, set<vector<string>>>> rules_map_set = CFGParser::get_CFG_rules(projectPath + "CFG_rules.txt");
@@ -25,6 +25,7 @@ int main()
     }
 
     // print rules_map
+    cout << "========= RULES after parsing, left recursion elemenation and left factoring =========" << endl;
     for (auto &rule : rules_map_set)
     {
         cout << rule.first << " -> ";
@@ -48,18 +49,6 @@ int main()
 
     First_Follow firstFollowObject;
     std::unordered_map<std::string, std::vector<std::string>> First = firstFollowObject.constructFirst(rules_map_set, non_terminals);
-    for (const auto &entry : First)
-    {
-        const std::string &key = entry.first;
-        const std::vector<std::string> &value = entry.second;
-
-        std::cout << "Key: " << key << "\nValues:";
-        for (const std::string &str : value)
-        {
-            std::cout << " " << str;
-        }
-        std::cout << "\n\n";
-    }
     std::vector<std::pair<std::string, std::vector<std::string>>> first;
     for (const auto &rule : rules_map_set)
     {
@@ -77,20 +66,6 @@ int main()
         }
     }
     std::unordered_map<std::string, std::vector<std::string>> Follow = firstFollowObject.constructFollow(rules_map_set, First, non_terminals);
-
-    for (const auto &entry : Follow)
-    {
-        const std::string &key = entry.first;
-        const std::vector<std::string> &values = entry.second;
-
-        std::cout << "Key: " << key << ", Values: ";
-        for (const auto &value : values)
-        {
-            std::cout << value << " ";
-        }
-        std::cout << std::endl;
-    }
-
     std::vector<std::pair<std::string, std::vector<std::string>>> follow;
 
     for (const auto &rule : rules_map_set)
@@ -109,9 +84,7 @@ int main()
         }
     }
 
-    cout << endl
-         << endl
-         << "=== FIRST ===" << endl;
+    cout << endl << "=== FIRST ===" << endl;
     for (const auto &entry : first)
     {
         std::cout << "Key: " << entry.first << ", Values: ";
@@ -122,9 +95,7 @@ int main()
         std::cout << std::endl;
     }
 
-    cout << endl
-         << endl
-         << "=== FOLLOW ===" << endl;
+    cout << endl << "=== FOLLOW ===" << endl;
 
     for (const auto &entry : follow)
     {
@@ -135,9 +106,7 @@ int main()
         }
         std::cout << std::endl;
     }
-
-    cout << endl
-         << endl;
+    cout << endl;
 
     ParsingTable pt(rules_map_set, first, follow, NTs);
 
@@ -177,6 +146,7 @@ int main()
     }
 
     // Print the elements of the sortedTable
+    cout << endl << "=== PARSING TABLE ===" << endl;
     for (const auto &outerPair : sortedTable)
     {
         cout << "Key: " << outerPair.first << endl;
@@ -199,8 +169,6 @@ int main()
         }
     }
 
-    cout << endl;
-
     /* Preparing the inputs for the top down parser. */
     auto it = find(NTs.begin(), NTs.end(), R"(\L)");
 
@@ -209,8 +177,10 @@ int main()
         NTs.erase(it);
     }
 
+    cout << endl;
     LexicalAnalyzerFactory factory(projectPath);
     LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
+    cout << endl;
 
     string testProgram = "int x;\n"
                          "x = 5;\n"
@@ -233,66 +203,6 @@ int main()
     }
 
     ofs.close();
-
-    /*
-    LexicalAnalyzerFactory factory(projectPath);
-    LexicalAnalyzer lexicalAnalyzer = factory.getLexicalAnalyzer();
-
-    string testProgram = "int sum , count , pass , mnt; while (pass !=\n"
-                         "10)\n"
-                         "{\n"
-                         "pass = pass + 1 ;\n"
-                         "}";
-
-    lexicalAnalyzer.setExpression(testProgram);
-    while (lexicalAnalyzer.hasNextToken())
-    {
-        pair<string, string> token = lexicalAnalyzer.getNextToken();
-        cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
-    }
-
-    string testString = "int n = 3\n"
-                        "float f = 56.7;\n"
-                        "float f2 = 5.67E1\n"
-                        "x x,x 5 n \n"
-                        "if (f >50) { f = f2 / 2}\n"
-                        "else { f = f2 * 2}";
-
-    lexicalAnalyzer.setExpression(testString);
-    while (lexicalAnalyzer.hasNextToken())
-    {
-        pair<string, string> token = lexicalAnalyzer.getNextToken();
-        cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
-    }
-
-    string test2 = "int x = 70 e b);";
-
-    lexicalAnalyzer.setExpression(test2);
-    while (lexicalAnalyzer.hasNextToken())
-    {
-        pair<string, string> token = lexicalAnalyzer.getNextToken();
-        cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
-    }
-
-    string test3 = "int x = 70&y;";
-
-    lexicalAnalyzer.setExpression(test3);
-    while (lexicalAnalyzer.hasNextToken())
-    {
-        pair<string, string> token = lexicalAnalyzer.getNextToken();
-        cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
-    }
-
-    string test4 = "boolean x = 0\n"
-                   "boolean x = false ";
-
-    lexicalAnalyzer.setExpression(test4);
-    while (lexicalAnalyzer.hasNextToken())
-    {
-        pair<string, string> token = lexicalAnalyzer.getNextToken();
-        cout << "TOKEN = " << token.first << " --- MATCHED PATTERN = " << token.second << endl;
-    }
-    */
 
     return 0;
 }

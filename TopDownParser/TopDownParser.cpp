@@ -37,18 +37,12 @@ bool TopDownParser::isTerminal(string token)
     return true;
 }
 
-string TopDownParser::removeQuotes(string token)
-{
-    // return token.substr(1, token.length() - 2);
-    return token;
-}
-
 string TopDownParser::addStackToLevel(stack<string> tokenStack, string levelStr)
 {
     stack<string> tempStack = tokenStack;
     while (!tempStack.empty())
     {
-        levelStr += tempStack.top();
+        levelStr += tempStack.top() + " ";
         tempStack.pop();
     }
     return levelStr;
@@ -83,13 +77,13 @@ vector<string> TopDownParser::parse()
         topToken = stk.top();
         inputToken = input.front();
         iii++;
+        cout << iii << ",  TopToken: " << topToken << ", inputToken: " << inputToken << endl;
         if (isTerminal(topToken))
         {
-            cout << "TERMINAL" << endl;
-            if (inputToken.compare(removeQuotes(topToken)) == 0)
+            if (inputToken.compare(topToken) == 0)
             {
-                curTreeLevel += inputToken;
-                matchedTokens.push_back(matchedTokens.back() + inputToken);
+                curTreeLevel += inputToken + " ";
+                matchedTokens.push_back(matchedTokens.back() + inputToken + " ");
                 stk.pop();
                 input.pop();
             }
@@ -98,8 +92,8 @@ vector<string> TopDownParser::parse()
                 string errorMsg = "Error Missing " + topToken + " inserted";
                 cout << errorMsg << endl;
                 treeLevels.push_back(errorMsg);
-                curTreeLevel += removeQuotes(topToken);
-                matchedTokens.push_back(matchedTokens.back() + removeQuotes(topToken));
+                curTreeLevel += topToken + " ";
+                matchedTokens.push_back(matchedTokens.back() + topToken + " ");
                 stk.pop();
             }
             curTreeLevel = addStackToLevel(stk, curTreeLevel);
@@ -108,7 +102,6 @@ vector<string> TopDownParser::parse()
         }
         else
         {
-            cout << "NONTERMINAL" << endl;
             unordered_map<string, vector<vector<string>>> topTokenRow = table[topToken];
 
             auto it = topTokenRow.find(inputToken);
@@ -117,7 +110,6 @@ vector<string> TopDownParser::parse()
 
             if (found)
             {
-                // cout << "ROW FOUND IN TABLE" << endl;
                 vector<string> productionRule = topTokenRow[inputToken][0];
                 string curTreeLevel = matchedTokens.back();
                 if (productionRule[0].compare("\\SYNC\\") == 0 || productionRule[0].compare("\\L") == 0)
